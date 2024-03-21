@@ -114,6 +114,8 @@ private:
     int compressed;
     QueryMatcherTaxonomyHook* taxonomyHook;
 
+    int useSketch;
+
     bool runSplit(const std::string &resultDB, const std::string &resultDBIndex, size_t split, bool merge);
 
     // compute kmer size and split size for index table

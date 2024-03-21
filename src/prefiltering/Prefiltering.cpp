@@ -53,7 +53,8 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         covThr(par.covThr), covMode(par.covMode), includeIdentical(par.includeIdentity),
         preloadMode(par.preloadMode),
         threads(static_cast<unsigned int>(par.threads)),
-        compressed(par.compressed) {
+        compressed(par.compressed),
+        useSketch(par.sketch) {
     sameQTDB = isSameQTDB();
 
     // init the substitution matrices
@@ -537,7 +538,7 @@ void Prefiltering::getIndexTable(int split, size_t dbFrom, size_t dbSize) {
         IndexBuilder::fillDatabase(indexTable, maskedLookup, unmaskedLookup, *kmerSubMat,
                                    _3merSubMatrix, _2merSubMatrix,
                                    &tseq, tdbr, dbFrom, dbFrom + dbSize,
-                                   localKmerThr, maskMode, maskLowerCaseMode, maskProb, targetSearchMode);
+                                   localKmerThr, maskMode, maskLowerCaseMode, maskProb, targetSearchMode, useSketch > 0);
 
         // sequenceLookup has to be temporarily present to speed up masking
         // afterwards its not needed anymore without diagonal scoring

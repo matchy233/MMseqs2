@@ -312,6 +312,7 @@ public:
     static const int PREF_MODE_KMER = 0;
     static const int PREF_MODE_UNGAPPED = 1;
     static const int PREF_MODE_EXHAUSTIVE = 2;
+    static const int PREF_MODE_SKETCH = 3;
 
     // unpackdb
     static const int UNPACK_NAME_KEY = 0;
@@ -708,6 +709,8 @@ public:
     // for modules that should handle -h themselves
     bool help;
 
+    int sketch;
+
     // tool citations
     std::map<unsigned int, const char*> citations;
 
@@ -1059,6 +1062,8 @@ public:
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
     PARAMETER(PARAM_HELP_LONG)
+
+    PARAMETER(PARAM_SKETCH)
 
     struct PredefinedSubstitutionMatrix{
         std::string name;

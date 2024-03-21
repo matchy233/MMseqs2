@@ -399,6 +399,96 @@ public:
         }
     }
 
+    // add k-mers of the sequence to the index table
+    void addMinimizerSketch(Sequence *s, Indexer *idxer,
+                           IndexEntryLocalTmp **buffer, size_t bufferSize,
+                           int threshold, const char *diagonalScore) {
+        // iterate over all k-mers of the sequence and add the id of s to the sequence list of the k-mer (tableDummy)
+        s->resetCurrPos();
+        const unsigned int k = s->getKmerSize();
+        const unsigned int windowSize = s->getKmerSize() * 2;
+        Sequence seq_window = Sequence(
+                s->getMaxLen(), s->getSeqType(), s->subMat, windowSize, s->isSpaced(), false, true,
+                s->getUserSpacedKmerPattern()
+        );
+        seq_window.mapSequence(
+                s->getId(),
+                s->getDbKey(),
+                s->getSeqData(),
+                s->L
+        );
+        idxer->reset();
+        size_t kmerPos = 0;
+        bool removeX = (Parameters::isEqualDbtype(s->getSequenceType(), Parameters::DBTYPE_NUCLEOTIDES) ||
+                        Parameters::isEqualDbtype(s->getSequenceType(), Parameters::DBTYPE_AMINO_ACIDS));
+        while (seq_window.hasNextKmer()) {
+            const unsigned char *kmer = seq_window.nextKmer();
+            // get all substring of kmer of length k
+            std::vector<std::pair<int, std::string>> subKmers;
+            for (unsigned int i = 0; i < strlen(reinterpret_cast<const char*>(kmer)) - k; i++) {
+                std::string subKmer = std::string(reinterpret_cast<const char*>(kmer) + i, k);
+                if (removeX && subKmer.find('X') != std::string::npos) {
+                    continue;
+                }
+                subKmers.emplace_back(i, subKmer);
+            }
+            if (subKmers.empty()) {
+                // debug warning
+                continue;
+            }
+            SORT_SERIAL(subKmers.begin(), subKmers.end(),
+                        [](const std::pair<int, std::string> &a, const std::pair<int, std::string> &b) {
+                            return a.second < b.second;
+                        });
+            // get minimizer
+            auto minimizer = reinterpret_cast<const unsigned char*>(subKmers[0].second.c_str());
+
+//            if (removeX && seq_window.kmerContainsX()) {
+//                continue;
+//            }
+            if (threshold > 0) {
+                int score = 0;
+                for (int pos = 0; pos < kmerSize; pos++) {
+                    score += diagonalScore[minimizer[pos]];
+                }
+                if (score < threshold) {
+                    continue;
+                }
+            }
+            unsigned int kmerIdx = idxer->int2index(minimizer, 0, kmerSize);
+            // if region got masked do not add kmer
+            if (offsets[kmerIdx + 1] - offsets[kmerIdx] == 0)
+                continue;
+
+            (*buffer)[kmerPos].kmer = kmerIdx;
+            (*buffer)[kmerPos].seqId = s->getId();
+            (*buffer)[kmerPos].position_j = seq_window.getCurrentPosition() + subKmers[0].first;
+            kmerPos++;
+            if (kmerPos >= bufferSize) {
+                *buffer = static_cast<IndexEntryLocalTmp *>(realloc(*buffer,
+                                                                    sizeof(IndexEntryLocalTmp) * bufferSize * 2));
+                bufferSize = bufferSize * 2;
+            }
+        }
+
+        if (kmerPos > 1) {
+            SORT_SERIAL(*buffer, *buffer + kmerPos, IndexEntryLocalTmp::comapreByIdAndPos);
+        }
+
+        unsigned int prevKmer = UINT_MAX;
+        for (size_t pos = 0; pos < kmerPos; pos++) {
+            unsigned int kmerIdx = (*buffer)[pos].kmer;
+            if (kmerIdx != prevKmer) {
+                size_t offset = __sync_fetch_and_add(&(offsets[kmerIdx]), 1);
+                IndexEntryLocal *entry = &entries[offset];
+                entry->seqId = (*buffer)[pos].seqId;
+                entry->position_j = (*buffer)[pos].position_j;
+            }
+            prevKmer = kmerIdx;
+        }
+    }
+
+
     // prints the IndexTable
     void print(char *num2aa) {
         for (size_t i = 0; i < tableSize; i++) {

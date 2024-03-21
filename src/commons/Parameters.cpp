@@ -303,7 +303,8 @@ Parameters::Parameters():
         PARAM_UNPACK_NAME_MODE(PARAM_UNPACK_NAME_MODE_ID, "--unpack-name-mode", "Unpack name mode", "Name unpacked files by 0: DB key, 1: accession (through .lookup)", typeid(int), (void *) &unpackNameMode, "^[0-1]{1}$"),
         // for modules that should handle -h themselves
         PARAM_HELP(PARAM_HELP_ID, "-h", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN),
-        PARAM_HELP_LONG(PARAM_HELP_LONG_ID, "--help", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN)
+        PARAM_HELP_LONG(PARAM_HELP_LONG_ID, "--help", "Help", "Help", typeid(bool), (void *) &help, "", MMseqsParameter::COMMAND_HIDDEN),
+        PARAM_SKETCH(PARAM_SKETCH_ID, "--sketch", "Sketch", "Sketch size", typeid(int), (void *) &sketch, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT)
 {
     if (instance) {
         Debug(Debug::ERROR) << "Parameter instance already exists!\n";
@@ -433,6 +434,7 @@ Parameters::Parameters():
     prefilter.push_back(&PARAM_LOCAL_TMP);
     prefilter.push_back(&PARAM_THREADS);
     prefilter.push_back(&PARAM_COMPRESSED);
+    prefilter.push_back(&PARAM_SKETCH);
     prefilter.push_back(&PARAM_V);
 
     // ungappedprefilter

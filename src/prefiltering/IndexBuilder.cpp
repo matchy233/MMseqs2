@@ -55,7 +55,7 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
                                 SequenceLookup **unmaskedLookup,BaseMatrix &subMat,
                                 ScoreMatrix & three, ScoreMatrix & two, Sequence *seq,
                                 DBReader<unsigned int> *dbr, size_t dbFrom, size_t dbTo, int kmerThr,
-                                bool mask, bool maskLowerCaseMode, float maskProb, int targetSearchMode) {
+                                bool mask, bool maskLowerCaseMode, float maskProb, int targetSearchMode, bool useSketch) {
     Debug(Debug::INFO) << "Index table: counting k-mers\n";
 
     const bool isProfile = Parameters::isEqualDbtype(seq->getSeqType(), Parameters::DBTYPE_HMM_PROFILE);
@@ -75,7 +75,7 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
         *unmaskedLookup = new SequenceLookup(dbSize, info->aaDbSize);
         *maskedLookup = new SequenceLookup(dbSize, info->aaDbSize);
         sequenceLookup = *maskedLookup;
-    } else{
+    } else {
         Debug(Debug::ERROR) << "This should not happen\n";
         EXIT(EXIT_FAILURE);
     }
@@ -248,7 +248,11 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
             if (isTargetSimiliarKmerSearch) {
                 s.mapSequence(id - dbFrom, qKey, dbr->getData(id, thread_idx), dbr->getSeqLen(id));
                 indexTable->addSimilarSequence(&s, generator, &buffer, bufferSize, &idxer);
-            } else {
+            } else if (useSketch) {
+                s.mapSequence(id - dbFrom, qKey, dbr->getData(id, thread_idx), dbr->getSeqLen(id));
+                indexTable->addMinimizerSketch(&s, &idxer, &buffer, bufferSize, kmerThr, idScoreLookup);
+            }
+            else {
                 s.mapSequence(id - dbFrom, qKey, sequenceLookup->getSequence(id - dbFrom));
                 indexTable->addSequence(&s, &idxer, &buffer, bufferSize, kmerThr, idScoreLookup);
             }
