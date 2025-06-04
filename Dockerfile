@@ -1,5 +1,5 @@
 ARG APP=mmseqs
-FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS builder
+FROM --platform=$BUILDPLATFORM debian:12.10-slim AS builder
 ARG TARGETARCH
 ARG APP
 ARG GPU
@@ -58,7 +58,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
       fi; \
     fi
 
-FROM debian:bookworm-slim
+FROM debian:12.10-slim
 ARG TARGETARCH
 ARG APP
 ARG GPU
