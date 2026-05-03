@@ -197,9 +197,9 @@ int pairaln(int argc, const char **argv, const Command& command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_LOOKUP_REV);
-    qdbr.open(DBReader<unsigned int>::NOSORT);
-    DBReader<unsigned int>::LookupEntry* lookup = qdbr.getLookup();
+    DBReader<DBKeyType> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_LOOKUP_REV);
+    qdbr.open(DBReader<DBKeyType>::NOSORT);
+    DBReader<DBKeyType>::LookupEntry* lookup = qdbr.getLookup();
     unsigned int maxFileNumber = 0;
     for (unsigned int i = 0; i < qdbr.getLookupSize(); i++) {
         maxFileNumber = std::max(maxFileNumber, lookup[i].fileNumber);
@@ -211,7 +211,7 @@ int pairaln(int argc, const char **argv, const Command& command) {
     }
     IndexReader *targetHeaderReaderIdx = NULL;
     if(par.pairfilter == Parameters::PAIRALN_FILTER_PROXIMITY) {
-        uint16_t extended = DBReader<unsigned int>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
+        uint16_t extended = DBReader<DBKeyType>::getExtendedDbtype(FileUtil::parseDbType(par.db3.c_str()));
         bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
         targetHeaderReaderIdx = new IndexReader(par.db2, par.threads,
                                                 extended & Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC
@@ -222,8 +222,8 @@ int pairaln(int argc, const char **argv, const Command& command) {
     std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
     MappingReader* mapping = new MappingReader(db2NoIndexName);
 
-    DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    alnDbr.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    alnDbr.open(DBReader<DBKeyType>::NOSORT);
 
     size_t localThreads = 1;
 #ifdef OPENMP
@@ -251,8 +251,8 @@ int pairaln(int argc, const char **argv, const Command& command) {
         output.reserve(100000);
         bool hasBacktrace = false;
         UniProtConverter converter;
-        unsigned int minResultDbKey = UINT_MAX;
-        Matcher::result_t emptyResult(UINT_MAX, 0, 0, 0, 0, 0,
+        DBKeyType minResultDbKey = static_cast<DBKeyType>(-1);
+        Matcher::result_t emptyResult(static_cast<DBKeyType>(-1), 0, 0, 0, 0, 0,
                                       0, UINT_MAX, 0, 0, UINT_MAX, 0, 0, "1M");
 #pragma omp for schedule(dynamic, 1)
         for (size_t fileNumber = 0; fileNumber < fileToIds.size(); fileNumber++) {

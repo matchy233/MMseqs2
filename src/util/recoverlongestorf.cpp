@@ -16,11 +16,11 @@ int recoverlongestorf(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> headerReader(par.hdr1.c_str(), par.hdr1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    headerReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> headerReader(par.hdr1.c_str(), par.hdr1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    headerReader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
-    DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    resultReader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     DBWriter writer(par.db3.c_str(), par.db3Index.c_str(), 1, false, Parameters::DBTYPE_OMIT_FILE);
     writer.open();
@@ -39,7 +39,7 @@ int recoverlongestorf(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < headerReader.getSize(); ++id) {
             progress.updateProgress();
-            unsigned int orfKey = headerReader.getDbKey(id);
+            DBKeyType orfKey = headerReader.getDbKey(id);
             char *orfHeader = headerReader.getData(id, thread_idx);
             Orf::SequenceLocation orf = Orf::parseOrfHeader(orfHeader);
             unsigned int contigKey = orf.id; 
@@ -90,7 +90,7 @@ int recoverlongestorf(int argc, const char **argv, const Command &command) {
         for (size_t i = 0; i < resultReader.getSize(); ++i) {
             progress.updateProgress();
 
-            unsigned int key = resultReader.getDbKey(i);
+            DBKeyType key = resultReader.getDbKey(i);
             size_t entryLength = resultReader.getEntryLen(i);
             if (entryLength > 1) {
                 size_t id = headerReader.getId(key);

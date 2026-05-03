@@ -160,7 +160,7 @@ inline char* writeProteomeToBuffer(const ProteomeEntry& proteome, char* buffer) 
     return tmpBuffer;
 }
 
-void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProteomeKey, DBReader<unsigned int>& tProteinDB, Matcher& matcher, Sequence& query, Sequence& target, std::vector<ProteomeEntry>& MAYBE_UNUSED(proteomeList), Parameters& par, unsigned int thread_idx, int swMode, std::vector<unsigned int>& localsharedEntryCount, std::vector<size_t>& proteomekeyToIndex, DBWriter& proteinAlignWriter) {
+void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProteomeKey, DBReader<DBKeyType>& tProteinDB, Matcher& matcher, Sequence& query, Sequence& target, std::vector<ProteomeEntry>& MAYBE_UNUSED(proteomeList), Parameters& par, unsigned int thread_idx, int swMode, std::vector<unsigned int>& localsharedEntryCount, std::vector<size_t>& proteomekeyToIndex, DBWriter& proteinAlignWriter) {
     char buffer[1024]; 
     unsigned int qLen = 0;
     unsigned int queryId = UINT_MAX;
@@ -190,7 +190,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
     if (includeAlign) {
         proteinAlignWriter.writeStart(thread_idx);
     }
-    const unsigned int queryKey = tProteinDB.getDbKey(queryId);
+    const DBKeyType queryKey = tProteinDB.getDbKey(queryId);
     char* querySeq = tProteinDB.getData(queryId, thread_idx); 
     query.mapSequence(queryId, queryKey, querySeq, tProteinDB.getSeqLen(queryId));
     matcher.initQuery(&query);
@@ -212,7 +212,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
         }
        
         const unsigned int targetId = eachTargetMember.proteinId; // lookupId
-        const unsigned int targetKey = tProteinDB.getDbKey(targetId);
+        const DBKeyType targetKey = tProteinDB.getDbKey(targetId);
         char* targetSeq = tProteinDB.getData(targetId, thread_idx);
 
         target.mapSequence(targetId, targetKey, targetSeq, tProteinDB.getSeqLen(targetId));
@@ -239,7 +239,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
     }
 }
 
-bool findReferenceProteome(std::vector<ProteomeEntry>& proteomeList, unsigned int& referenceProteomeKey, DBReader<unsigned int>& MAYBE_UNUSED(tProteinDB), Parameters& par,
+bool findReferenceProteome(std::vector<ProteomeEntry>& proteomeList, unsigned int& referenceProteomeKey, DBReader<DBKeyType>& MAYBE_UNUSED(tProteinDB), Parameters& par,
                          std::vector<unsigned int>& availableProteomeKeys, std::vector<size_t>& proteomekeyToIndex, unsigned int totalClusterCount) {
     if (availableProteomeKeys.empty()) {
         Debug(Debug::INFO) << "No available proteomes found" << "\n"; 
@@ -290,13 +290,13 @@ int proteomecluster(int argc, const char **argv, const Command &command){
     Timer timer;
 
     //Open the target protein database
-    DBReader<unsigned int> tProteinDB(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_LOOKUP|DBReader<unsigned int>::USE_SOURCE_REV);
-    tProteinDB.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> tProteinDB(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_LOOKUP|DBReader<DBKeyType>::USE_SOURCE_REV);
+    tProteinDB.open(DBReader<DBKeyType>::NOSORT);
     const int tProteinSeqType = tProteinDB.getDbtype();
 
     //Open the linclust result
-    DBReader<unsigned int> linResDB(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    linResDB.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> linResDB(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX);
+    linResDB.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
         tProteinDB.readMmapedDataInMemory();
@@ -309,7 +309,7 @@ int proteomecluster(int argc, const char **argv, const Command &command){
     std::vector<unsigned int> availableProteomeKeys;
     // TODO : Can be optimized. Is there any smarter way to get protein entry size in each source?
     for (size_t i = 0; i < tProteinDB.getSize(); i++) {
-        unsigned int dbKey = tProteinDB.getDbKey(i); //Need check gg with cascaded
+        DBKeyType dbKey = tProteinDB.getDbKey(i); //Need check gg with cascaded
         size_t lookupId = tProteinDB.getLookupIdByKey(dbKey);
         const unsigned int proteomeSourceId = tProteinDB.getLookupFileNumber(lookupId);
         if (proteomeList[proteomeSourceId].proteomeKey == UINT_MAX) { //need to optimize. Is tProteinDB sorted by sourceEntry?
@@ -430,7 +430,7 @@ int proteomecluster(int argc, const char **argv, const Command &command){
     Debug(Debug::INFO) << "Time for initializing proteomecluster: " << timer.lap() << " sec\n";
 
     //Open the DBWriter
-    int proteomeDBType = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_GENERIC_DB, Parameters::DBTYPE_EXTENDED_SET);
+    int proteomeDBType = DBReader<DBKeyType>::setExtendedDbtype(Parameters::DBTYPE_GENERIC_DB, Parameters::DBTYPE_EXTENDED_SET);
     DBWriter proteomeClustWriter(par.db3.c_str(), par.db3Index.c_str(), 1, par.compressed, proteomeDBType);
     proteomeClustWriter.open();
     DBWriter clusterCountWriter(par.db4.c_str(), par.db4Index.c_str(), 1, par.compressed, proteomeDBType);

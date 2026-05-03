@@ -59,8 +59,8 @@ StatsComputer::StatsComputer(const Parameters &par)
         : stat(MapStatString(par.stat)),
           queryDb(par.db1), queryDbIndex(par.db1Index),
           targetDb(par.db2), targetDbIndex(par.db2Index), tsvOut(par.tsvOut) {
-    resultReader = new DBReader<unsigned int>(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    resultReader->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    resultReader = new DBReader<DBKeyType>(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    resultReader->open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     this->threads = par.threads;
 
     const bool shouldCompress = tsvOut == false && par.compressed == true;
@@ -355,10 +355,10 @@ std::string firstline(const char *seq) {
 
 template<typename T>
 int StatsComputer::sequenceWise(typename PerSequence<T>::type call, bool onlyResultDb) {
-    DBReader<unsigned int> *targetReader = NULL;
+    DBReader<DBKeyType> *targetReader = NULL;
     if (!onlyResultDb) {
-        targetReader = new DBReader<unsigned int>(targetDb.c_str(), targetDbIndex.c_str(), threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-        targetReader->open(DBReader<unsigned int>::NOSORT);
+        targetReader = new DBReader<DBKeyType>(targetDb.c_str(), targetDbIndex.c_str(), threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+        targetReader->open(DBReader<DBKeyType>::NOSORT);
     }
     Debug::Progress progress(resultReader->getSize());
 

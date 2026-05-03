@@ -34,13 +34,13 @@ public:
 
         std::string sizeDBName = queryDbName + "_set_size";
         std::string sizeDBIndex = queryDbName + "_set_size.index";
-        querySizeReader = new DBReader<unsigned int>(sizeDBName.c_str(), sizeDBIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-        querySizeReader->open(DBReader<unsigned int>::NOSORT);
+        querySizeReader = new DBReader<DBKeyType>(sizeDBName.c_str(), sizeDBIndex.c_str(), threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX);
+        querySizeReader->open(DBReader<DBKeyType>::NOSORT);
 
         sizeDBName = targetDbName + "_set_size";
         sizeDBIndex = targetDbName + "_set_size.index";
-        targetSizeReader = new DBReader<unsigned int>(sizeDBName.c_str(), sizeDBIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-        targetSizeReader->open(DBReader<unsigned int>::NOSORT);
+        targetSizeReader = new DBReader<DBKeyType>(sizeDBName.c_str(), sizeDBIndex.c_str(), threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX);
+        targetSizeReader->open(DBReader<DBKeyType>::NOSORT);
 
         unsigned int maxOrfCount = 0;
         for (size_t i = 0; i < querySizeReader->getSize(); ++i) { 
@@ -214,8 +214,8 @@ public:
 private:
     double alpha;
     int aggregationMode;
-    DBReader<unsigned int> *querySizeReader;
-    DBReader<unsigned int> *targetSizeReader;
+    DBReader<DBKeyType> *querySizeReader;
+    DBReader<DBKeyType> *targetSizeReader;
     double* lGammaLookup;
     double** logBiLookup;
 };

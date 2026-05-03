@@ -23,9 +23,9 @@ int sortWithIndex(const char *dataFileSeq,
                   const char *dataFileHeader,
                   const char *indexFileHeader)
 {
-    DBReader<unsigned int> reader(dataFileSeq, indexFileSeq, 1, DBReader<unsigned int>::USE_INDEX);
-    reader.open(DBReader<unsigned int>::HARDNOSORT);
-    DBReader<unsigned int>::Index *index = reader.getIndex();
+    DBReader<DBKeyType> reader(dataFileSeq, indexFileSeq, 1, DBReader<DBKeyType>::USE_INDEX);
+    reader.open(DBReader<DBKeyType>::HARDNOSORT);
+    DBReader<DBKeyType>::Index *index = reader.getIndex();
     struct stat st;
     if (stat(dataFileSeq, &st) != 0) {
         Debug(Debug::ERROR) << "stat failed: " << dataFileSeq << "\n";
@@ -46,7 +46,7 @@ int sortWithIndex(const char *dataFileSeq,
         index[i].id = i;
     }
 
-    SORT_PARALLEL(index, index + reader.getSize(), DBReader<unsigned int>::Index::compareByLength);
+    SORT_PARALLEL(index, index + reader.getSize(), DBReader<DBKeyType>::Index::compareByLength);
 
     FILE *seqOut = FileUtil::openFileOrDie(dataFileSeq, "wb", true);
     setvbuf(seqOut, NULL, _IOFBF, 1024*1024*50);
@@ -79,9 +79,9 @@ int sortWithIndex(const char *dataFileSeq,
     }
     fclose(fin);
 
-    DBReader<unsigned int> header(dataFileHeader, indexFileHeader, 1, DBReader<unsigned int>::USE_INDEX);
-    header.open(DBReader<unsigned int>::HARDNOSORT);
-    DBReader<unsigned int>::Index *headerIndex = header.getIndex();
+    DBReader<DBKeyType> header(dataFileHeader, indexFileHeader, 1, DBReader<DBKeyType>::USE_INDEX);
+    header.open(DBReader<DBKeyType>::HARDNOSORT);
+    DBReader<DBKeyType>::Index *headerIndex = header.getIndex();
     FILE *headerout = FileUtil::openFileOrDie(dataFileHeader, "wb", true);
     setvbuf(headerout, NULL, _IOFBF, 1024*1024*50);
     offset = 0;
@@ -100,7 +100,7 @@ int sortWithIndex(const char *dataFileSeq,
     fclose(headerout);
     delete [] buf;
 
-    SORT_PARALLEL(index, index + reader.getSize(), DBReader<unsigned int>::Index::compareByOffset);
+    SORT_PARALLEL(index, index + reader.getSize(), DBReader<DBKeyType>::Index::compareByOffset);
     {
         std::string tmpIndex = std::string(indexFileSeq) + ".tmp";
         FILE *indexout = FileUtil::openFileOrDie(tmpIndex.c_str(), "wb", false);
@@ -152,14 +152,14 @@ int mergeSequentialByJointIndex(
     joint.reserve(totalEntries);
     size_t maxLen = 0;
     for (size_t i = 0; i < shuffleSplits; i++) {
-        DBReader<unsigned int> reader(
+        DBReader<DBKeyType> reader(
                 dataFiles[i],
                 indexFiles[i],
                 1,
                 DBReader<uint32_t>::USE_INDEX
         );
         reader.open(DBReader<uint32_t>::HARDNOSORT);
-        DBReader<unsigned int>::Index* index = reader.getIndex();
+        DBReader<DBKeyType>::Index* index = reader.getIndex();
         for(size_t j = 0; j < reader.getSize(); j++){
             joint.emplace_back((unsigned int)i, index[j].id, index[j].length);
             maxLen = std::max(maxLen, static_cast<size_t>(index[j].length));
@@ -223,8 +223,8 @@ int mergeSequentialByJointIndex(
     size_t mergedOffset = 0;
     size_t mergedOffsetHeader = 0;
     std::vector<char> scratch(maxLen);
-    DBReader<unsigned int>::Index entry;
-    DBReader<unsigned int>::LookupEntry lookupEntry;
+    DBReader<DBKeyType>::Index entry;
+    DBReader<DBKeyType>::LookupEntry lookupEntry;
 
     char indexBuffer[1024];
     std::string lookupBuffer;
@@ -262,7 +262,7 @@ int mergeSequentialByJointIndex(
         }
         lookupEntry.fileNumber = sourceLookup[qe.fileIdx][(qe.id - qe.fileIdx) / 32];
         lookupBuffer.clear();
-        DBReader<unsigned int>::lookupEntryToBuffer(lookupBuffer, lookupEntry);
+        DBReader<DBKeyType>::lookupEntryToBuffer(lookupBuffer, lookupEntry);
         written = fwrite(lookupBuffer.data(), 1, lookupBuffer.size(), foutLookup);
         if (UNLIKELY(written != lookupBuffer.size())) {
             Debug(Debug::ERROR) << "Can not write to lookup file " << outLookupFile << "\n";
@@ -478,10 +478,10 @@ int createdb(int argc, const char **argv, const Command& command) {
     size_t seqFileOffset = 0;
 
     size_t fileCount = filenames.size();
-    DBReader<unsigned int>* reader = NULL;
+    DBReader<DBKeyType>* reader = NULL;
     if (dbInput == true) {
-        reader = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_LOOKUP);
-        reader->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+        reader = new DBReader<DBKeyType>(par.db1.c_str(), par.db1Index.c_str(), 1, DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_LOOKUP);
+        reader->open(DBReader<DBKeyType>::LINEAR_ACCCESS);
         fileCount = reader->getSize();
     }
 
@@ -499,7 +499,7 @@ int createdb(int argc, const char **argv, const Command& command) {
 
         std::string sourceName;
         if (dbInput == true) {
-            unsigned int dbKey = reader->getDbKey(fileIdx);
+            DBKeyType dbKey = reader->getDbKey(fileIdx);
             size_t lookupId = reader->getLookupIdByKey(dbKey);
             sourceName = reader->getLookupEntryName(lookupId);
         } else {
@@ -745,8 +745,8 @@ int createdb(int argc, const char **argv, const Command& command) {
         hdrWriter.close(true, false);
         seqWriter.close(true, false);
         if (par.shuffleDatabase == true) {
-            DBWriter::createRenumberedDB(dataFile, indexFile, "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
-            DBWriter::createRenumberedDB(hdrDataFile, hdrIndexFile, "", "", DBReader<unsigned int>::LINEAR_ACCCESS);
+            DBWriter::createRenumberedDB(dataFile, indexFile, "", "", DBReader<DBKeyType>::LINEAR_ACCCESS);
+            DBWriter::createRenumberedDB(hdrDataFile, hdrIndexFile, "", "", DBReader<DBKeyType>::LINEAR_ACCCESS);
         }
         if (par.createdbMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT) {
             if (filenames.size() == 1) {
@@ -760,8 +760,8 @@ int createdb(int argc, const char **argv, const Command& command) {
             }
         }
         if (par.writeLookup == true) {
-            DBReader<unsigned int> readerHeader(hdrDataFile.c_str(), hdrIndexFile.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-            readerHeader.open(DBReader<unsigned int>::NOSORT);
+            DBReader<DBKeyType> readerHeader(hdrDataFile.c_str(), hdrIndexFile.c_str(), 1, DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX);
+            readerHeader.open(DBReader<DBKeyType>::NOSORT);
             // create lookup file
             std::string lookupFile = dataFile + ".lookup";
             FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
@@ -769,7 +769,7 @@ int createdb(int argc, const char **argv, const Command& command) {
             buffer.reserve(2048);
             unsigned int splitIdx = 0;
             unsigned int splitCounter = 0;
-            DBReader<unsigned int>::LookupEntry entry;
+            DBReader<DBKeyType>::LookupEntry entry;
             for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
                 size_t splitSize = sourceLookup[splitIdx].size();
                 if (splitSize == 0 || splitCounter > sourceLookup[splitIdx].size() - 1) {
@@ -808,7 +808,7 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
     if(gpuCompatibleDB){
-        dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_GPU);
+        dbType = DBReader<DBKeyType>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_GPU);
     }
     DBWriter::writeDbtypeFile(seqWriter.getDataFileName(), dbType ,par.compressed);
     DBWriter::writeDbtypeFile(hdrWriter.getDataFileName(), Parameters::DBTYPE_GENERIC_DB, par.compressed);

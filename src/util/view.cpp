@@ -23,9 +23,9 @@ int view(int argc, const char **argv, const Command& command) {
             break;
     }
     const bool lookupMode = par.dbIdMode == Parameters::ID_MODE_LOOKUP;
-    int dbMode = DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA;
+    int dbMode = DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA;
     if (lookupMode) {
-        dbMode |= DBReader<unsigned int>::USE_LOOKUP_REV;
+        dbMode |= DBReader<DBKeyType>::USE_LOOKUP_REV;
     }
     IndexReader reader(par.db1, par.threads, indexSrcType, false, dbMode);
     for (size_t i = 0; i < ids.size(); ++i) {

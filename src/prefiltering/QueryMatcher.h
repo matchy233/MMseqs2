@@ -31,7 +31,7 @@ struct statistics_t{
 };
 
 struct hit_t {
-    unsigned int seqId;
+    DBKeyType seqId;
     int prefScore;
     unsigned short diagonal;
 

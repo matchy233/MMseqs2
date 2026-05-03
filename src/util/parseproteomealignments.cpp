@@ -18,18 +18,18 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // Open DBs
-    DBReader<unsigned int> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_LOOKUP|DBReader<unsigned int>::USE_SOURCE);
-    qdbr.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_LOOKUP|DBReader<DBKeyType>::USE_SOURCE);
+    qdbr.open(DBReader<DBKeyType>::NOSORT);
     size_t qdbSourceSize = qdbr.getSourceSize();
    
-    DBReader<unsigned int> tdbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_LOOKUP|DBReader<unsigned int>::USE_SOURCE);
-    tdbr.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> tdbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_LOOKUP|DBReader<DBKeyType>::USE_SOURCE);
+    tdbr.open(DBReader<DBKeyType>::NOSORT);
     size_t tdbSourceSize = tdbr.getSourceSize();
 
-    DBReader<unsigned int> alndbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    alndbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> alndbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX);
+    alndbr.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
-    int proteomeDBType = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_GENERIC_DB, Parameters::DBTYPE_EXTENDED_SET);
+    int proteomeDBType = DBReader<DBKeyType>::setExtendedDbtype(Parameters::DBTYPE_GENERIC_DB, Parameters::DBTYPE_EXTENDED_SET);
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), 1, par.compressed, proteomeDBType);
     resultWriter.open();
 
@@ -43,7 +43,7 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
     memset(qSourceIdtoNumEntries, 0, qdbSourceSize * sizeof(unsigned int));
 
     for (size_t i = 0; i < qdbr.getSize(); i++) {
-        unsigned int dbKey = qdbr.getDbKey(i);
+        DBKeyType dbKey = qdbr.getDbKey(i);
         size_t lookupId = qdbr.getLookupIdByKey(dbKey);
         const unsigned int proteomeSourceId = qdbr.getLookupFileNumber(lookupId);
         qSourceIdtoNumEntries[proteomeSourceId]++;
@@ -69,7 +69,7 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
             for (size_t id = start; id < (start + bucketSize); id++) {
                 progress.updateProgress();
 
-                const unsigned int queryDbKey = alndbr.getDbKey(id);
+                const DBKeyType queryDbKey = alndbr.getDbKey(id);
                 // const unsigned int qId = qdbr.getId(queryDbKey);
                 size_t qLookupId = qdbr.getLookupIdByKey(queryDbKey);
                 const unsigned int querySourceId = qdbr.getLookupFileNumber(qLookupId);

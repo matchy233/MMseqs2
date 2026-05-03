@@ -99,8 +99,8 @@ int filterdb(int argc, const char **argv, const Command &command) {
     const bool shouldAddSelfMatch = par.includeIdentity;
     const ComparisonOperator compOperator = mapOperator(par.compOperator);
 
-    DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    reader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     DBWriter writer(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, reader.getDbtype());
     writer.open();
@@ -112,7 +112,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
     std::vector<std::pair<std::string, std::string>> mapping;
 
     // JOIN_DB
-    DBReader<unsigned int>* helper = NULL;
+    DBReader<DBKeyType>* helper = NULL;
     std::unordered_map<unsigned int, float> weights;
     // REGEX_FILTERING
     regex_t regex;
@@ -226,8 +226,8 @@ int filterdb(int argc, const char **argv, const Command &command) {
     } else if (par.joinDB.empty() == false) {
         mode = JOIN_DB;
         std::string joinIndex = par.joinDB + ".index";
-        helper = new DBReader<unsigned int>(par.joinDB.c_str(), joinIndex.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-        helper->open(DBReader<unsigned int>::NOSORT);
+        helper = new DBReader<DBKeyType>(par.joinDB.c_str(), joinIndex.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+        helper->open(DBReader<DBKeyType>::NOSORT);
         Debug(Debug::INFO) << "Joining databases by column value\n";
     } else if (par.beatsFirst == true) {
         mode = BEATS_FIRST;
@@ -289,7 +289,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
             progress.updateProgress();
 
             char *data = reader.getData(id, thread_idx);
-            unsigned int queryKey = reader.getDbKey(id);
+            DBKeyType queryKey = reader.getDbKey(id);
             size_t dataLength = reader.getEntryLen(id);
             int counter = 0;
 

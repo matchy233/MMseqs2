@@ -14,7 +14,7 @@
 #include <omp.h>
 #endif
 
-ClusteringAlgorithms::ClusteringAlgorithms(DBReader<unsigned int>* seqDbr, DBReader<unsigned int>* alnDbr,
+ClusteringAlgorithms::ClusteringAlgorithms(DBReader<DBKeyType>* seqDbr, DBReader<DBKeyType>* alnDbr,
                                            int threads, int scoretype, int maxiterations,
                                            unsigned int *keyToSet, size_t *sourceOffsets, unsigned int **sourceLookupTable, unsigned int *sourceList, unsigned int sourceLen, bool needSET){
     this->seqDbr=seqDbr;
@@ -303,7 +303,7 @@ void ClusteringAlgorithms::greedyIncrementalLowMem( unsigned int *assignedcluste
 #endif
 #pragma omp for schedule(dynamic, 4)
             for (long i = start; i < end; i++) {
-                unsigned int clusterKey = seqDbr->getDbKey(i);
+                DBKeyType clusterKey = seqDbr->getDbKey(i);
                 std::vector<unsigned int>& keys = buffer[i - start].second;
                 if(needSET) {
                     size_t start1 = sourceOffsets[clusterKey];
@@ -384,7 +384,7 @@ void ClusteringAlgorithms::readInClusterData(unsigned int **elementLookupTable, 
 #endif
 #pragma omp for schedule(dynamic, 1000)
         for (size_t i = 0; i < seqDbr->getSize(); i++) {
-            const unsigned int clusterId = seqDbr->getDbKey(i);
+            const DBKeyType clusterId = seqDbr->getDbKey(i);
             if(needSET) {
                 size_t start = sourceOffsets[clusterId];
                 size_t end = sourceOffsets[clusterId+1];

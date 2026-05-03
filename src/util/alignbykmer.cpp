@@ -27,8 +27,8 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
     IndexReader * tDbrIdx = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0 );
     IndexReader * qDbrIdx = NULL;
     int querySeqType = 0;
-    DBReader<unsigned int> * qdbr = NULL;
-    DBReader<unsigned int> * tdbr = tDbrIdx->sequenceReader;
+    DBReader<DBKeyType> * qdbr = NULL;
+    DBReader<DBKeyType> * tdbr = tDbrIdx->sequenceReader;
     int targetSeqType = tDbrIdx->getDbtype();
     bool sameDB = (par.db2.compare(par.db1) == 0);
     if (sameDB == true) {
@@ -63,8 +63,8 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
     }
     par.printParameters(command.cmd, argc, argv, *command.params);
 
-    DBReader<unsigned int> dbr_res(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    dbr_res.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> dbr_res(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    dbr_res.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     if(dbr_res.isSortedByOffset() && qdbr->isSortedByOffset()){
         qdbr->setSequentialAdvice();
@@ -193,7 +193,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                 progress.updateProgress();
 
                 char *data = dbr_res.getData(id, thread_idx);
-                unsigned int queryId = qdbr->getId(dbr_res.getDbKey(id));
+                DBKeyType queryId = qdbr->getId(dbr_res.getDbKey(id));
                 char *querySeq = qdbr->getData(queryId, thread_idx);
                 query.mapSequence(id, queryId, querySeq, qdbr->getSeqLen(id));
 

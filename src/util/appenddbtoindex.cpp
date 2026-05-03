@@ -62,8 +62,8 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
     std::string outIndexName = outDb + ".index";
     size_t offset = 0;
     {
-        DBReader<unsigned int> outReader(outDb.c_str(), outIndexName.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        outReader.open(DBReader<unsigned int>::NOSORT);
+        DBReader<DBKeyType> outReader(outDb.c_str(), outIndexName.c_str(), 1, DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX);
+        outReader.open(DBReader<DBKeyType>::NOSORT);
         // validate that given keys dont exist already
         for (size_t i = 0; i < keys.size(); ++i) {
             if (outReader.getId(keys[i]) != UINT_MAX) {
@@ -87,11 +87,11 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
         const std::string& inDb = par.filenames[i];
         const std::string inIndexName = inDb + ".index";
 
-        DBReader<unsigned int> reader(inDb.c_str(), inIndexName.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-        reader.open(DBReader<unsigned int>::HARDNOSORT);
+        DBReader<DBKeyType> reader(inDb.c_str(), inIndexName.c_str(), 1, DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX);
+        reader.open(DBReader<DBKeyType>::HARDNOSORT);
 
-        char* data = DBReader<unsigned int>::serialize(reader);
-        size_t inSize = DBReader<unsigned int>::indexMemorySize(reader);
+        char* data = DBReader<DBKeyType>::serialize(reader);
+        size_t inSize = DBReader<DBKeyType>::indexMemorySize(reader);
         size_t written = fwrite(data, 1, inSize, outDataHandle);
         free(data);
         if (written != inSize) {

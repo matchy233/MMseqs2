@@ -34,17 +34,17 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         }
     }
 
-    int mode = DBReader<unsigned int>::USE_INDEX;
+    int mode = DBReader<DBKeyType>::USE_INDEX;
     if (write == true) {
-        mode |= DBReader<unsigned int>::USE_DATA;
+        mode |= DBReader<DBKeyType>::USE_DATA;
     }
     if (shouldConcatLookup) {
-        mode |= DBReader<unsigned int>::USE_LOOKUP;
+        mode |= DBReader<DBKeyType>::USE_LOOKUP;
     }
-    DBReader<unsigned int> dbA(dataFileNameA.c_str(), indexFileNameA.c_str(), threads, mode);
-    DBReader<unsigned int> dbB(dataFileNameB.c_str(), indexFileNameB.c_str(), threads, mode);
-    dbA.open(DBReader<unsigned int>::NOSORT);
-    dbB.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> dbA(dataFileNameA.c_str(), indexFileNameA.c_str(), threads, mode);
+    DBReader<DBKeyType> dbB(dataFileNameB.c_str(), indexFileNameB.c_str(), threads, mode);
+    dbA.open(DBReader<DBKeyType>::NOSORT);
+    dbB.open(DBReader<DBKeyType>::NOSORT);
     indexSizeA = dbA.getSize();
     indexSizeB = dbB.getSize();
 
@@ -204,9 +204,9 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
     unsigned int maxSetIdA = 0;
     // handle lookup
     if (shouldConcatLookup) {
-        DBReader<unsigned int> lookupReaderA(dataFileNameA.c_str(), indexFileNameA.c_str(), 1, DBReader<unsigned int>::USE_LOOKUP);
-        lookupReaderA.open(DBReader<unsigned int>::NOSORT);
-        DBReader<unsigned int>::LookupEntry* lookupA = lookupReaderA.getLookup();
+        DBReader<DBKeyType> lookupReaderA(dataFileNameA.c_str(), indexFileNameA.c_str(), 1, DBReader<DBKeyType>::USE_LOOKUP);
+        lookupReaderA.open(DBReader<DBKeyType>::NOSORT);
+        DBReader<DBKeyType>::LookupEntry* lookupA = lookupReaderA.getLookup();
 
         FILE* lookupFilePtr = fopen((dataFileNameC + ".lookup").c_str(), "w");
 
@@ -242,9 +242,9 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         lookupReaderA.close();
 
         // for B we compute: newSetIdB = maxSetIdA + 1 + setIdB
-        DBReader<unsigned int> lookupReaderB(dataFileNameB.c_str(), indexFileNameB.c_str(), 1, DBReader<unsigned int>::USE_LOOKUP);
-        lookupReaderB.open(DBReader<unsigned int>::NOSORT);
-        DBReader<unsigned int>::LookupEntry* lookupB = lookupReaderB.getLookup();
+        DBReader<DBKeyType> lookupReaderB(dataFileNameB.c_str(), indexFileNameB.c_str(), 1, DBReader<DBKeyType>::USE_LOOKUP);
+        lookupReaderB.open(DBReader<DBKeyType>::NOSORT);
+        DBReader<DBKeyType>::LookupEntry* lookupB = lookupReaderB.getLookup();
         for (size_t i = 0; i < lookupReaderB.getLookupSize(); ++i) {
             unsigned int prevKeyB = lookupB[i].id;
             std::string accB = lookupB[i].entryName;

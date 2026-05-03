@@ -97,19 +97,19 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
     }
     std::sort(qid_vec.begin(), qid_vec.end());
 
-    DBReader<unsigned int> aReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    aReader.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> aReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    aReader.open(DBReader<DBKeyType>::NOSORT);
     const int aSeqDbType = aReader.getDbtype();
     if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
         aReader.readMmapedDataInMemory();
     }
 
-    DBReader<unsigned int> *resultAbReader = new DBReader<unsigned int>(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    resultAbReader->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> *resultAbReader = new DBReader<DBKeyType>(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    resultAbReader->open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
-    DBReader<unsigned int> *cReader = NULL;
+    DBReader<DBKeyType> *cReader = NULL;
     IndexReader *cReaderIdx = NULL;
-    DBReader<unsigned int> *resultBcReader = NULL;
+    DBReader<DBKeyType> *resultBcReader = NULL;
     IndexReader *resultBcReaderIdx = NULL;
     if (Parameters::isEqualDbtype(FileUtil::parseDbType(par.db2.c_str()), Parameters::DBTYPE_INDEX_DB)) {
         bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
@@ -122,14 +122,14 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                                             (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
         resultBcReader = resultBcReaderIdx->sequenceReader;
     } else {
-        cReader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-        cReader->open(DBReader<unsigned int>::NOSORT);
+        cReader = new DBReader<DBKeyType>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+        cReader->open(DBReader<DBKeyType>::NOSORT);
         if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
             cReader->readMmapedDataInMemory();
         }
 
-        resultBcReader = new DBReader<unsigned int>(par.db4.c_str(), par.db4Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-        resultBcReader->open(DBReader<unsigned int>::NOSORT);
+        resultBcReader = new DBReader<DBKeyType>(par.db4.c_str(), par.db4Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+        resultBcReader->open(DBReader<DBKeyType>::NOSORT);
         if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
             resultBcReader->readMmapedDataInMemory();
         }
@@ -149,10 +149,10 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
     if (returnAlnRes == false) {
         dbType = Parameters::DBTYPE_HMM_PROFILE;
         if (par.pcmode == Parameters::PCMODE_CONTEXT_SPECIFIC) {
-            dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_CONTEXT_PSEUDO_COUNTS);
+            dbType = DBReader<DBKeyType>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_CONTEXT_PSEUDO_COUNTS);
         }
     } else {
-        dbType = DBReader<unsigned int>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
+        dbType = DBReader<DBKeyType>::setExtendedDbtype(dbType, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
     }
     DBWriter writer(par.db5.c_str(), par.db5Index.c_str(), localThreads, par.compressed, dbType);
     writer.open();
@@ -236,7 +236,7 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
         for (size_t i = 0; i < resultAbReader->getSize(); ++i) {
             progress.updateProgress();
 
-            unsigned int queryKey = resultAbReader->getDbKey(i);
+            DBKeyType queryKey = resultAbReader->getDbKey(i);
 
             size_t aSeqId = aReader.getId(queryKey);
             if (returnAlnRes == false || par.expansionMode == Parameters::EXPAND_RESCORE_BACKTRACE) {

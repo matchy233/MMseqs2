@@ -14,8 +14,8 @@ public :
             Aggregation(targetDbName, resultDbName, outputDbName, threads, compressed), simpleBestHitMode(simpleBestHitMode) {
         std::string sizeDbName = targetDbName + "_set_size";
         std::string sizeDbIndex = targetDbName + "_set_size.index";
-        targetSizeReader = new DBReader<unsigned int>(sizeDbName.c_str(), sizeDbIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-        targetSizeReader->open(DBReader<unsigned int>::NOSORT);
+        targetSizeReader = new DBReader<DBKeyType>(sizeDbName.c_str(), sizeDbIndex.c_str(), threads, DBReader<DBKeyType>::USE_DATA|DBReader<DBKeyType>::USE_INDEX);
+        targetSizeReader->open(DBReader<DBKeyType>::NOSORT);
     }
 
     ~BestHitBySetFilter() {
@@ -115,7 +115,7 @@ public :
     }
 
 private:
-    DBReader<unsigned int> *targetSizeReader;
+    DBReader<DBKeyType> *targetSizeReader;
     bool simpleBestHitMode;
 };
 

@@ -182,7 +182,7 @@ struct __attribute__((__packed__)) KmerPosition {
 
 
 struct __attribute__((__packed__)) KmerEntry {
-    unsigned int seqId;
+    DBKeyType seqId;
     short diagonal;
     unsigned char score;
     void setReverse(bool ){
@@ -194,7 +194,7 @@ struct __attribute__((__packed__)) KmerEntry {
 };
 
 struct __attribute__((__packed__)) KmerEntryRev {
-    unsigned int seqId;
+    DBKeyType seqId;
     short diagonal;
     unsigned char score;
     unsigned char rev;
@@ -260,14 +260,14 @@ void writeKmerMatcherResult(DBWriter & dbw, KmerPosition<T, includeAdjacency, In
 
 template <typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
 KmerPosition<T, includeAdjacency, IncludeSeqLen> * doComputation(size_t totalKmers, size_t split, size_t splits, std::string splitFile,
-                                DBReader<unsigned int> & seqDbr, Parameters & par, BaseMatrix  * subMat,
+                                DBReader<DBKeyType> & seqDbr, Parameters & par, BaseMatrix  * subMat,
                                 size_t KMER_SIZE, size_t chooseTopKmer, float chooseTopKmerScale = 0.0);
 
 template <typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
 KmerPosition<T, includeAdjacency, IncludeSeqLen> *initKmerPositionMemory(size_t size);
 
 template <int TYPE, typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
-std::pair<size_t, size_t> fillKmerPositionArray(KmerPosition<T, includeAdjacency, IncludeSeqLen> * kmerArray, size_t kmerArraySize, DBReader<unsigned int> &seqDbr,
+std::pair<size_t, size_t> fillKmerPositionArray(KmerPosition<T, includeAdjacency, IncludeSeqLen> * kmerArray, size_t kmerArraySize, DBReader<DBKeyType> &seqDbr,
                                                  Parameters & par, BaseMatrix * subMat, bool hashWholeSequence,
                                                  size_t hashStartRange, size_t hashEndRange, size_t * hashDistribution);
 
@@ -279,8 +279,8 @@ template <typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
 size_t computeMemoryNeededLinearfilter(size_t totalKmer);
 
 template <typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
-std::vector<std::pair<size_t, size_t>> setupKmerSplits(Parameters &par, BaseMatrix * subMat, DBReader<unsigned int> &seqDbr, size_t totalKmers, size_t splits);
-size_t computeKmerCount(DBReader<unsigned int> &reader, size_t KMER_SIZE, size_t chooseTopKmer,
+std::vector<std::pair<size_t, size_t>> setupKmerSplits(Parameters &par, BaseMatrix * subMat, DBReader<DBKeyType> &seqDbr, size_t totalKmers, size_t splits);
+size_t computeKmerCount(DBReader<DBKeyType> &reader, size_t KMER_SIZE, size_t chooseTopKmer,
                         float chooseTopKmerScale = 0.0);
 
 void setLinearFilterDefault(Parameters *p);

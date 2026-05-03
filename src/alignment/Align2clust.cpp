@@ -273,30 +273,30 @@ void clusterThreadFuncGreedy(unsigned int* assignedCluster) {
     }
 }
 
-int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<unsigned int> &alnDbr) {
-    DBReader<unsigned int> *seqDbr = new DBReader<unsigned int>(
+int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &alnDbr) {
+    DBReader<DBKeyType> *seqDbr = new DBReader<DBKeyType>(
         par.db1.c_str(), par.db1Index.c_str(), par.threads, 
-        DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX
+        DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX
     );
-    seqDbr->open(DBReader<unsigned int>::SORT_BY_LENGTH);
+    seqDbr->open(DBReader<DBKeyType>::SORT_BY_LENGTH);
  
-    DBReader<unsigned int> *cluDbr = nullptr;
-    DBReader<unsigned int> *cluSeqDbr = nullptr;
+    DBReader<DBKeyType> *cluDbr = nullptr;
+    DBReader<DBKeyType> *cluSeqDbr = nullptr;
     if (par.filterCluDBFile.empty()== false && par.filterSeqDBFile.empty()== false) {
         std::string cluIndex = par.filterCluDBFile + ".index";
-        cluDbr = new DBReader<unsigned int>(
+        cluDbr = new DBReader<DBKeyType>(
             par.filterCluDBFile.c_str(), cluIndex.c_str(), par.threads, 
-            DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX
+            DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX
         );
-        cluDbr->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+        cluDbr->open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
         std::string cluSeqIndex = par.filterSeqDBFile + ".index";
-        cluSeqDbr = new DBReader<unsigned int>(
+        cluSeqDbr = new DBReader<DBKeyType>(
             par.filterSeqDBFile.c_str(), cluSeqIndex.c_str(), par.threads, 
-            DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX
+            DBReader<DBKeyType>::USE_DATA | DBReader<DBKeyType>::USE_INDEX
         );
             
-        cluSeqDbr->open(DBReader<unsigned int>::LINEAR_ACCCESS);
+        cluSeqDbr->open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     } else if (par.filterCluDBFile.empty() != par.filterSeqDBFile.empty()) {
         Debug(Debug::ERROR)<< "Error: Both filterCluDBFile and filterSeqDBFile should be provided together.\n";
         EXIT(EXIT_FAILURE);
@@ -361,7 +361,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<unsigned int
 #endif
 #pragma omp for schedule(dynamic, 1000)
             for (size_t i = 0; i < seqDbr->getSize(); i++) {
-                const unsigned int clusterId = seqDbr->getDbKey(i);
+                const DBKeyType clusterId = seqDbr->getDbKey(i);
                 const size_t alnId = alnDbr.getId(clusterId);
                 const char *data = alnDbr.getData(alnId, thread_idx);
                 const size_t dataSize = alnDbr.getEntryLen(alnId);
@@ -767,9 +767,9 @@ int align2clust(int argc, const char **argv, const Command &command) {
     Timer timer;
     timer.reset();
     
-    DBReader<unsigned int> alnDbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, 
-                                  DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> alnDbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, 
+                                  DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    alnDbr.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     int dbtype =  Parameters::DBTYPE_CLUSTER_RES;
 
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), 1, par.compressed, dbtype);

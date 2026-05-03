@@ -12,20 +12,20 @@ int createseqfiledb(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> headerDb(par.hdr1.c_str(), par.hdr1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    headerDb.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> headerDb(par.hdr1.c_str(), par.hdr1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    headerDb.open(DBReader<DBKeyType>::NOSORT);
     if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
         headerDb.readMmapedDataInMemory();
     }
 
-    DBReader<unsigned int> seqDb(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    seqDb.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> seqDb(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    seqDb.open(DBReader<DBKeyType>::NOSORT);
     if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
         seqDb.readMmapedDataInMemory();
     }
 
-    DBReader<unsigned int> resultDb(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    resultDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> resultDb(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    resultDb.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     DBWriter writer(par.db3.c_str(), par.db3Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_GENERIC_DB);
     writer.open();
@@ -45,7 +45,7 @@ int createseqfiledb(int argc, const char **argv, const Command &command) {
         for (size_t i = 0; i < resultDb.getSize(); ++i) {
             progress.updateProgress();
 
-            unsigned int key = resultDb.getDbKey(i);
+            DBKeyType key = resultDb.getDbKey(i);
             char *data = resultDb.getData(i, thread_idx);
 
             size_t entries = Util::countLines(data, resultDb.getEntryLen(i) - 1);

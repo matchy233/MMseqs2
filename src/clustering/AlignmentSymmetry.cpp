@@ -17,7 +17,7 @@
 
 #define LEN(x, y) (x[y+1] - x[y])
 
-void AlignmentSymmetry::readInData(DBReader<unsigned int>*alnDbr, DBReader<unsigned int>*seqDbr,
+void AlignmentSymmetry::readInData(DBReader<DBKeyType>*alnDbr, DBReader<DBKeyType>*seqDbr,
                                    unsigned int **elementLookupTable, unsigned short **elementScoreTable,
                                    int scoretype, size_t *offsets) {
     const int alnType = alnDbr->getDbtype();
@@ -39,7 +39,7 @@ void AlignmentSymmetry::readInData(DBReader<unsigned int>*alnDbr, DBReader<unsig
                 progress.updateProgress();
                 // seqDbr is descending sorted by length
                 // the assumption is that clustering is B -> B (not A -> B)
-                const unsigned int clusterId = seqDbr->getDbKey(i);
+                const DBKeyType clusterId = seqDbr->getDbKey(i);
                 char *data = alnDbr->getDataByDBKey(clusterId, thread_idx);
 
                 if (*data == '\0') { // check if file contains entry
@@ -119,7 +119,7 @@ void AlignmentSymmetry::readInData(DBReader<unsigned int>*alnDbr, DBReader<unsig
     }
 }
 
-void AlignmentSymmetry::readInDataSet(DBReader<unsigned int>*alnDbr, DBReader<unsigned int>*seqDbr,
+void AlignmentSymmetry::readInDataSet(DBReader<DBKeyType>*alnDbr, DBReader<DBKeyType>*seqDbr,
                                    unsigned int **elementLookupTable, unsigned short **elementScoreTable,
                                    int scoretype, size_t *offsets, size_t *sourceOffsets, unsigned int **sourceLookupTable,  unsigned int *keyToSet, bool isfirst) {
     const int alnType = alnDbr->getDbtype();
@@ -142,7 +142,7 @@ void AlignmentSymmetry::readInDataSet(DBReader<unsigned int>*alnDbr, DBReader<un
                 progress.updateProgress();
                 // seqDbr is descending sorted by length
                 // the assumption is that clustering is B -> B (not A -> B)
-                const unsigned int clusterId = seqDbr->getDbKey(i);
+                const DBKeyType clusterId = seqDbr->getDbKey(i);
                 size_t start1 = sourceOffsets[clusterId];
                 size_t end1 = sourceOffsets[clusterId+1];
                 size_t len = end1 - start1;

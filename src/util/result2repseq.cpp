@@ -12,14 +12,14 @@ int result2repseq(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> seqReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    seqReader.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> seqReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    seqReader.open(DBReader<DBKeyType>::NOSORT);
     if (par.preloadMode != Parameters::PRELOAD_MODE_MMAP) {
         seqReader.readMmapedDataInMemory();
     }
 
-    DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    resultReader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, seqReader.getDbtype());
     resultWriter.open();
@@ -51,7 +51,7 @@ int result2repseq(int argc, const char **argv, const Command &command) {
     resultWriter.close(true);
     resultReader.close();
     seqReader.close();
-    DBReader<unsigned int>::softlinkDb(par.db1, par.db3, DBFiles::SEQUENCE_ANCILLARY);
+    DBReader<DBKeyType>::softlinkDb(par.db1, par.db3, DBFiles::SEQUENCE_ANCILLARY);
 
     return EXIT_SUCCESS;
 }

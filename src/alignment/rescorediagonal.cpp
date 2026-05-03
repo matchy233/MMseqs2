@@ -44,13 +44,13 @@ float parsePrecisionLib(const std::string &scoreFile, double targetSeqid, double
 
 int doRescorediagonal(Parameters &par,
                       DBWriter &resultWriter,
-                      DBReader<unsigned int> &resultReader,
+                      DBReader<DBKeyType> &resultReader,
               const size_t dbFrom, const size_t dbSize) {
 
 
     IndexReader * qDbrIdx = NULL;
-    DBReader<unsigned int> * qdbr = NULL;
-    DBReader<unsigned int> * tdbr = NULL;
+    DBReader<DBKeyType> * qdbr = NULL;
+    DBReader<DBKeyType> * tdbr = NULL;
     bool touch = (par.preloadMode != Parameters::PRELOAD_MODE_MMAP);
     IndexReader * tDbrIdx = new IndexReader(par.db2, par.threads, IndexReader::SEQUENCES,   (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0 );
     int querySeqType = 0;
@@ -391,8 +391,8 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> resultReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    resultReader.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     int dbtype = resultReader.getDbtype(); // this is DBTYPE_PREFILTER_RES || DBTYPE_PREFILTER_REV_RES
     if(par.rescoreMode == Parameters::RESCORE_MODE_ALIGNMENT ||
        par.rescoreMode == Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT ||

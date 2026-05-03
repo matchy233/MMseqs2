@@ -24,7 +24,7 @@ char* getScoreLookup(BaseMatrix &matrix) {
 
 class DbInfo {
 public:
-    DbInfo(size_t dbFrom, size_t dbTo, unsigned int effectiveKmerSize, DBReader<unsigned int> & reader) {
+    DbInfo(size_t dbFrom, size_t dbTo, unsigned int effectiveKmerSize, DBReader<DBKeyType> & reader) {
         tableSize = 0;
         aaDbSize = 0;
         size_t dbSize = dbTo - dbFrom;
@@ -55,7 +55,7 @@ public:
 
 void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup ** externalLookup,
                                 BaseMatrix &subMat, ScoreMatrix & three, ScoreMatrix & two, Sequence *seq,
-                                DBReader<unsigned int> *dbr, size_t dbFrom, size_t dbTo, int kmerThr,
+                                DBReader<DBKeyType> *dbr, size_t dbFrom, size_t dbTo, int kmerThr,
                                 bool mask, bool maskLowerCaseMode, float maskProb, int maskNrepeats, int targetSearchMode) {
     Debug(Debug::INFO) << "Index table: counting k-mers\n";
 
@@ -113,7 +113,7 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup ** extern
 
             s.resetCurrPos();
             char *seqData = dbr->getData(id, thread_idx);
-            unsigned int qKey = dbr->getDbKey(id);
+            DBKeyType qKey = dbr->getDbKey(id);
 
             s.mapSequence(id - dbFrom, qKey, seqData, dbr->getSeqLen(id));
             if(s.getMaxLen() >= bufferSize ){
@@ -234,7 +234,7 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup ** extern
                 s.resetCurrPos();
                 progress2.updateProgress();
 
-                unsigned int qKey = dbr->getDbKey(id);
+                DBKeyType qKey = dbr->getDbKey(id);
                 if (isTargetSimiliarKmerSearch) {
                     s.mapSequence(id - dbFrom, qKey, dbr->getData(id, thread_idx), dbr->getSeqLen(id));
                     indexTable->addSimilarSequence(&s, generator, &buffer, bufferSize, &idxer);

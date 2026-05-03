@@ -54,8 +54,8 @@ int extractframes(int argc, const char **argv, const Command& command) {
     Parameters& par = Parameters::getInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    reader.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> reader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    reader.open(DBReader<DBKeyType>::NOSORT);
 
     int outputDbtype = reader.getDbtype();
     if (par.translate) {
@@ -99,7 +99,7 @@ int extractframes(int argc, const char **argv, const Command& command) {
         for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
 
-            unsigned int key = reader.getDbKey(i);
+            DBKeyType key = reader.getDbKey(i);
             const char* data = reader.getData(i, thread_idx);
             size_t seqLen = reader.getSeqLen(i);
 
@@ -165,7 +165,7 @@ int extractframes(int argc, const char **argv, const Command& command) {
             }
         }
     }
-    DBReader<unsigned int>::softlinkDb(par.db1, par.db2, DBFiles::SOURCE);
+    DBReader<DBKeyType>::softlinkDb(par.db1, par.db2, DBFiles::SOURCE);
 
     return EXIT_SUCCESS;
 }

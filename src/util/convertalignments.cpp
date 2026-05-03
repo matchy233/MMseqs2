@@ -178,7 +178,7 @@ int convertalignments(int argc, const char **argv, const Command &command) {
 
     bool isTranslatedSearch = false;
 
-    int dbaccessMode = needSequenceDB ? (DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA) : (DBReader<unsigned int>::USE_INDEX);
+    int dbaccessMode = needSequenceDB ? (DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA) : (DBReader<DBKeyType>::USE_INDEX);
 
     std::map<unsigned int, unsigned int> qKeyToSet;
     std::map<unsigned int, unsigned int> tKeyToSet;
@@ -252,8 +252,8 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         evaluer = new EvalueComputation(tDbr->sequenceReader->getAminoAcidDBSize(), subMat, gapOpen, gapExtend);
     }
 
-    DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    alnDbr.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+    DBReader<DBKeyType> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
+    alnDbr.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
 
     size_t localThreads = 1;
 #ifdef OPENMP
@@ -355,7 +355,7 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         for (size_t i = 0; i < alnDbr.getSize(); i++) {
             progress.updateProgress();
 
-            const unsigned int queryKey = alnDbr.getDbKey(i);
+            const DBKeyType queryKey = alnDbr.getDbKey(i);
             char *querySeqData = NULL;
             size_t querySeqLen = 0;
             queryProfData.clear();
