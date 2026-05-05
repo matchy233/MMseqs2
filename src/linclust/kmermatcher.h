@@ -93,7 +93,7 @@ template <typename T>
 struct SeqLenData<T, false> {
     static T* seqkey_to_len;
 
-    T getSeqLen(unsigned int id) const { return seqkey_to_len[id]; }
+    T getSeqLen(size_t id) const { return seqkey_to_len[id]; }
     void setSeqLen(T) {}
 };
 
@@ -102,7 +102,7 @@ T* SeqLenData<T, false>::seqkey_to_len = NULL;
 template <typename T, bool includeAdjacency = false, bool IncludeSeqLen = false>
 struct __attribute__((__packed__)) KmerPosition {
     size_t kmer;
-    unsigned int id;
+    DBKeyType id;
     T pos;
     SeqLenData<T, IncludeSeqLen> sl;
     AdjacentData<includeAdjacency> adj;
@@ -207,16 +207,16 @@ struct __attribute__((__packed__)) KmerEntryRev {
 };
 
 struct FileKmerPosition {
-    size_t repSeq;
-    unsigned int id;
+    DBKeyType repSeq;
+    DBKeyType id;
     short pos;
     unsigned char score;
     unsigned int file;
     char reverse;
     FileKmerPosition(){}
-    FileKmerPosition(size_t repSeq, unsigned int id,short pos, unsigned char score, unsigned int file):
+    FileKmerPosition(DBKeyType repSeq, DBKeyType id,short pos, unsigned char score, unsigned int file):
             repSeq(repSeq), id(id), pos(pos), score(score), file(file), reverse(0) {}
-    FileKmerPosition(size_t repSeq, unsigned int id,short pos, unsigned char score, char reverse, unsigned int file):
+    FileKmerPosition(DBKeyType repSeq, DBKeyType id,short pos, unsigned char score, char reverse, unsigned int file):
             repSeq(repSeq), id(id), pos(pos), score(score), file(file), reverse(reverse) {}
 };
 

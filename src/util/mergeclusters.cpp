@@ -25,7 +25,7 @@ int mergeclusters(int argc, const char **argv, const Command &command) {
 
     // init the structure for cluster merging
     // it has the size of all possible cluster (sequence amount)
-    std::list<unsigned int> *mergedClustering = new std::list<unsigned int>[dbr.getSize()];
+    std::list<size_t> *mergedClustering = new std::list<size_t>[dbr.getSize()];
 
     // read the clustering from the first clustering step
     std::string firstClu = clusterings.front();
@@ -54,7 +54,7 @@ int mergeclusters(int argc, const char **argv, const Command &command) {
             // go through the sequences in the cluster and add them to the initial clustering
             while (*data != '\0') {
                 Util::parseKey(data, keyBuffer);
-                unsigned int key = Util::fast_atoi<unsigned int>(keyBuffer);
+                DBKeyType key = Util::fast_atoi<uint64_t>(keyBuffer);
                 size_t seqId = dbr.getId(key);
                 mergedClustering[cluId].push_back(seqId);
                 data = Util::skipLine(data);
@@ -93,7 +93,7 @@ int mergeclusters(int argc, const char **argv, const Command &command) {
                 char *data = cluDb.getData(i, thread_idx);
                 while (*data != '\0') {
                     Util::parseKey(data, keyBuffer);
-                    unsigned int key = Util::fast_atoi<unsigned int>(keyBuffer);
+                    DBKeyType key = Util::fast_atoi<uint64_t>(keyBuffer);
                     size_t seqId = dbr.getId(key);
                     if (seqId != cluId) { // to avoid copies of the same cluster list
                         mergedClustering[cluId].splice(mergedClustering[cluId].end(), mergedClustering[seqId]);
@@ -133,8 +133,8 @@ int mergeclusters(int argc, const char **argv, const Command &command) {
 
             // representative
             DBKeyType dbKey = dbr.getDbKey(i);
-            for (std::list<unsigned int>::iterator it = mergedClustering[i].begin(); it != mergedClustering[i].end(); ++it) {
-                char *tmpBuff = Itoa::u32toa_sse2(dbr.getDbKey(*it), buffer);
+            for (std::list<size_t>::iterator it = mergedClustering[i].begin(); it != mergedClustering[i].end(); ++it) {
+                char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(dbr.getDbKey(*it)), buffer);
                 size_t length = tmpBuff - buffer - 1;
                 res.append(buffer, length);
                 res.push_back('\n');

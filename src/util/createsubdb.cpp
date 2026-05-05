@@ -38,11 +38,11 @@ int createsubdb(int argc, const char **argv, const Command& command) {
     char *line = NULL;
     size_t len = 0;
     char dbKey[256];
-    unsigned int prevKey = 0;
+    DBKeyType prevKey = 0;
     bool isOrdered = true;
     while (getline(&line, &len, orderFile) != -1) {
         Util::parseKey(line, dbKey);
-        unsigned int key;
+        DBKeyType key;
         if (lookupMode) {
             size_t lookupId = reader.getLookupIdByAccession(dbKey);
             if (lookupId == SIZE_MAX) {
@@ -51,13 +51,13 @@ int createsubdb(int argc, const char **argv, const Command& command) {
             }
             key = reader.getLookupKey(lookupId);
         } else {
-            key = Util::fast_atoi<unsigned int>(dbKey);
+            key = Util::fast_atoi<uint64_t>(dbKey);
         }
 
         isOrdered &= (prevKey <= key);
         prevKey = key;
         const size_t id = reader.getId(key);
-        if (id >= UINT_MAX) {
+        if (id == SIZE_MAX) {
             Debug(Debug::WARNING) << "Key " << dbKey << " not found in database\n";
             continue;
         }

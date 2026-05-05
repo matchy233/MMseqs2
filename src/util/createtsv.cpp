@@ -134,7 +134,7 @@ int createtsv(int argc, const char **argv, const Command &command) {
                 if(targetColumn == SIZE_T_MAX){
                     targetAccession = "";
                 } else if (hasTargetDB) {
-                    unsigned int targetKey = (unsigned int) strtoul(dbKey, NULL, 10);
+                    DBKeyType targetKey = Util::fast_atoi<uint64_t>(dbKey);
                     size_t targetIndex = targetDB->getId(targetKey);
                     char *targetData;
                     if(needSET == false) {

@@ -1554,7 +1554,7 @@ void writeKmerMatcherResult(DBWriter & dbw,
                 int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
                 prefResultsOutString.append(buffer, len);
             }
-            unsigned int targetId = hashSeqPair[kmerPos].id;
+            DBKeyType targetId = hashSeqPair[kmerPos].id;
             T diagonal = hashSeqPair[kmerPos].pos;
             size_t kmerOffset = 0;
             T prevDiagonal = diagonal;
@@ -1613,9 +1613,9 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
     if(offsetPos + 1 >= entrySize){
         return offsetPos;
     }
-    unsigned int repSeqId = entries[offsetPos].seqId;
+    DBKeyType repSeqId = entries[offsetPos].seqId;
     size_t pos = 0;
-    while(entries[offsetPos + pos].seqId != UINT_MAX){
+    while(entries[offsetPos + pos].seqId != static_cast<DBKeyType>(SIZE_MAX)){
         if(TYPE == Parameters::DBTYPE_NUCLEOTIDES){
             queue.push(FileKmerPosition(repSeqId, entries[offsetPos+pos].seqId, entries[offsetPos+pos].diagonal, entries[offsetPos+pos].score, entries[offsetPos+pos].getRev(), file));
         }else{
@@ -1623,7 +1623,7 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
         }
         pos++;
     }
-    queue.push(FileKmerPosition(repSeqId, UINT_MAX, 0, 0, file));
+    queue.push(FileKmerPosition(repSeqId, static_cast<DBKeyType>(SIZE_MAX), 0, 0, file));
     pos++;
     return offsetPos+pos;
 }
@@ -1693,7 +1693,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
         char buffer[1024];
         FileKmerPosition res;
         bool hasRepSeq = (repSequence.size() > 0);
-        unsigned int currRepSeq = UINT_MAX;
+        DBKeyType currRepSeq = static_cast<DBKeyType>(SIZE_MAX);
 
         if (queue.empty() == false) {
             res = queue.top();
@@ -1712,7 +1712,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
             res = queue.top();
             queue.pop();
 
-            if (res.id == UINT_MAX) {
+            if (res.id == static_cast<DBKeyType>(SIZE_MAX)) {
                 offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
                                                               entries[res.file], entrySizes[res.file]);
                 
@@ -1723,7 +1723,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                 }
                 prefResultsOutString.clear();
 
-                while (queue.empty() == false && queue.top().id == UINT_MAX) {
+                while (queue.empty() == false && queue.top().id == static_cast<DBKeyType>(SIZE_MAX)) {
                     res = queue.top();
                     queue.pop();
                     offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
@@ -1754,8 +1754,8 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
             int bestRevertMask  = 0;
             short bestDiagonal  = res.pos;
             int topScore        = 0;
-            unsigned int hitId;
-            unsigned int prevHitId;
+            DBKeyType hitId;
+            DBKeyType prevHitId;
             int diagonalScore   = 0;
             short prevDiagonal  = res.pos;
 
@@ -1780,9 +1780,9 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                         queue.push(res);
                     }
                 } else {
-                    hitId = UINT_MAX;
+                    hitId = static_cast<DBKeyType>(SIZE_MAX);
                 }
-            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != UINT_MAX);
+            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != SIZE_MAX);
 
             hit_t h;
             h.seqId     = prevHitId;
@@ -1857,7 +1857,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition<seqLenType, includeAdjac
 
             T writeBuffer[BUFFER_SIZE];
             T nullEntry;
-            nullEntry.seqId = UINT_MAX;
+            nullEntry.seqId = static_cast<DBKeyType>(SIZE_MAX);
             nullEntry.diagonal = 0;
 
             for (size_t kmerPos = startIdx; kmerPos < endIdx && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++) {
@@ -1887,7 +1887,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition<seqLenType, includeAdjac
                     bufferPos++;
                 }
 
-                unsigned int targetId = hashSeqPair[kmerPos].id;
+                DBKeyType targetId = hashSeqPair[kmerPos].id;
                 seqLenType diagonal = hashSeqPair[kmerPos].pos;
                 int forward = 0;
                 int reverse = 0;

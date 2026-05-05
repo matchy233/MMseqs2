@@ -86,7 +86,7 @@ int sortWithIndex(const char *dataFileSeq,
     setvbuf(headerout, NULL, _IOFBF, 1024*1024*50);
     offset = 0;
     for (size_t i = 0; i < header.getSize(); i++) {
-        unsigned int sortedId = index[i].id;
+        size_t sortedId = static_cast<size_t>(index[i].id);
         size_t written = fwrite(buf + headerIndex[sortedId].offset, 1, headerIndex[sortedId].length, headerout);
         // reconstruct old id
         index[i].id = headerIndex[sortedId].id;
@@ -136,9 +136,10 @@ int mergeSequentialByJointIndex(
 ) {
     struct JointEntry {
         unsigned int fileIdx;
-        unsigned int  id;
-        unsigned   length;
-        JointEntry(unsigned int fileIdx, unsigned int id, unsigned length) : fileIdx(fileIdx), id(id), length(length) {};
+        DBKeyType id;
+        unsigned int length;
+        JointEntry(unsigned int fileIdx, DBKeyType id, unsigned int length)
+            : fileIdx(fileIdx), id(id), length(length) {}
 
         bool operator<(JointEntry const &o) const {
             if (length != o.length){
@@ -156,9 +157,9 @@ int mergeSequentialByJointIndex(
                 dataFiles[i],
                 indexFiles[i],
                 1,
-                DBReader<uint32_t>::USE_INDEX
+                DBReader<DBKeyType>::USE_INDEX
         );
-        reader.open(DBReader<uint32_t>::HARDNOSORT);
+        reader.open(DBReader<DBKeyType>::HARDNOSORT);
         DBReader<DBKeyType>::Index* index = reader.getIndex();
         for(size_t j = 0; j < reader.getSize(); j++){
             joint.emplace_back((unsigned int)i, index[j].id, index[j].length);
@@ -449,7 +450,7 @@ int createdb(int argc, const char **argv, const Command& command) {
     std::string hdrDataFile = dataFile + "_h";
     std::string hdrIndexFile = dataFile + "_h.index";
 
-    unsigned int entries_num = 0;
+    DBKeyType entries_num = 0;
     const char newline = '\n';
 
     size_t sampleCount = 0;
@@ -576,7 +577,7 @@ int createdb(int argc, const char **argv, const Command& command) {
                 EXIT(EXIT_FAILURE);
             }
 
-            unsigned int id = par.identifierOffset + entries_num;
+            DBKeyType id = static_cast<DBKeyType>(par.identifierOffset) + entries_num;
             if (dbType == -1) {
                 // check for the first 10 sequences if they are nucleotide sequences
                 if (sampleCount < 10 || (sampleCount % 100) == 0) {
@@ -767,10 +768,10 @@ int createdb(int argc, const char **argv, const Command& command) {
             FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
             std::string buffer;
             buffer.reserve(2048);
-            unsigned int splitIdx = 0;
-            unsigned int splitCounter = 0;
+            size_t splitIdx = 0;
+            size_t splitCounter = 0;
             DBReader<DBKeyType>::LookupEntry entry;
-            for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
+            for (size_t id = 0; id < readerHeader.getSize(); id++) {
                 size_t splitSize = sourceLookup[splitIdx].size();
                 if (splitSize == 0 || splitCounter > sourceLookup[splitIdx].size() - 1) {
                     splitIdx++;

@@ -40,7 +40,7 @@ int convert2fasta(int argc, const char **argv, const Command& command) {
     Debug(Debug::INFO) << "Start writing file to " << par.db2 << "\n";
     for(size_t i = 0; i < from->getSize(); i++){
         DBKeyType key = from->getDbKey(i);
-        unsigned int headerKey = db_header.getId(key);
+        size_t headerKey = db_header.getId(key);
         const char* headerData = db_header.getData(headerKey, 0);
         const size_t headerLen = db_header.getEntryLen(headerKey);
 
@@ -48,7 +48,7 @@ int convert2fasta(int argc, const char **argv, const Command& command) {
         fwrite(headerData, sizeof(char), headerLen - 2, fastaFP);
         fwrite(newline, sizeof(char), 1, fastaFP);
 
-        unsigned int bodyKey = db.getId(key);
+        size_t bodyKey = db.getId(key);
         const char* bodyData = db.getData(bodyKey, 0);
         const size_t bodyLen = db.getEntryLen(bodyKey);
         fwrite(bodyData, sizeof(char), bodyLen - 2, fastaFP);

@@ -89,7 +89,7 @@ public:
         const char *wordCnt[255];
         size_t cols = Util::getWordsOfLine(data, wordCnt, 254);
         if (cols == 3) {
-            result.seqId = Util::fast_atoi<unsigned int>(wordCnt[0]);
+            result.seqId = Util::fast_atoi<uint64_t>(wordCnt[0]);
             result.prefScore = Util::fast_atoi<int>(wordCnt[1]);
             result.diagonal = static_cast<unsigned short>(Util::fast_atoi<short>(wordCnt[2]));
         } else {
@@ -119,7 +119,7 @@ public:
 
     static size_t prefilterHitToBuffer(char *buff1, hit_t &h) {
         char * basePos = buff1;
-        char * tmpBuff = Itoa::u32toa_sse2((uint32_t) h.seqId, buff1);
+        char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(h.seqId), buff1);
         *(tmpBuff-1) = '\t';
         int score = static_cast<int>(h.prefScore);
         tmpBuff = Itoa::i32toa_sse2(score, tmpBuff);

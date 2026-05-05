@@ -24,10 +24,10 @@
 #define MIN_SIZE 32
 
 struct ClusterResult {
-    unsigned int sequenceIdx;
-    unsigned int representativeId;
-    unsigned int prefSize;
-    std::vector<unsigned int> memberIds;
+    size_t sequenceIdx;
+    size_t representativeId;
+    size_t prefSize;
+    std::vector<size_t> memberIds;
 
     bool revalidated = false;
     
@@ -95,8 +95,8 @@ static std::priority_queue<ClusterResult, std::vector<ClusterResult>, GreedyComp
 static std::priority_queue<ClusterResult, std::vector<ClusterResult>, SetCoverComparator> setCoverReadyQueue;
 
 static std::unique_ptr<std::vector<ClusterResult>> elements;
-static unsigned int currentProcessPosition = 0; 
-static unsigned int currentPrefSize = 0; 
+static size_t currentProcessPosition = 0;
+static size_t currentPrefSize = 0;
 static bool allCalculationsDone = false;
 
 static float parsePrecisionLib(const std::string &scoreFile, double targetSeqid, double targetCov, double targetPrecision) {
@@ -124,28 +124,28 @@ static float parsePrecisionLib(const std::string &scoreFile, double targetSeqid,
     return 0;
 }
 
-static void writeData(DBWriter *dbWriter, const std::pair<unsigned int, unsigned int> * results, size_t dbSize) {
+static void writeData(DBWriter *dbWriter, const std::pair<DBKeyType, DBKeyType> * results, size_t dbSize) {
     std::string resultString;
     resultString.reserve(1024 * 1024 * 1024);
     char buffer[32];
-    unsigned int previousRepresentativeKey = UINT_MAX;
+    DBKeyType previousRepresentativeKey = static_cast<DBKeyType>(SIZE_MAX);
     
     for (size_t i = 0; i < dbSize; i++) {
-        unsigned int currentRepresentativeKey = results[i].first;
+        DBKeyType currentRepresentativeKey = results[i].first;
         
         if (previousRepresentativeKey != currentRepresentativeKey) {
-            if (previousRepresentativeKey != UINT_MAX) {
+            if (previousRepresentativeKey != SIZE_MAX) {
                 dbWriter->writeData(resultString.c_str(), resultString.length(), previousRepresentativeKey);
             }
             resultString.clear();
-            char *outPos = Itoa::u32toa_sse2(currentRepresentativeKey, buffer);
+            char *outPos = Itoa::u64toa_sse2(static_cast<uint64_t>(currentRepresentativeKey), buffer);
             resultString.append(buffer, (outPos - buffer - 1));
             resultString.push_back('\n');
         }
         
-        unsigned int memberKey = results[i].second;
+        DBKeyType memberKey = results[i].second;
         if (memberKey != currentRepresentativeKey) {
-            char *outPos = Itoa::u32toa_sse2(memberKey, buffer);
+            char *outPos = Itoa::u64toa_sse2(static_cast<uint64_t>(memberKey), buffer);
             resultString.append(buffer, (outPos - buffer - 1));
             resultString.push_back('\n');
         }
@@ -153,15 +153,15 @@ static void writeData(DBWriter *dbWriter, const std::pair<unsigned int, unsigned
         previousRepresentativeKey = currentRepresentativeKey;
     }
     
-    if (previousRepresentativeKey != UINT_MAX) {
+    if (previousRepresentativeKey != SIZE_MAX) {
         dbWriter->writeData(resultString.c_str(), resultString.length(), previousRepresentativeKey);
     }
 }
 
-static void (*clusterThreadFunc)(unsigned int*) = nullptr;
+static void (*clusterThreadFunc)(size_t*) = nullptr;
 
-void clusterThreadFuncSetcover(unsigned int* assignedCluster) {
-    std::vector<unsigned int> valid;
+void clusterThreadFuncSetcover(size_t* assignedCluster) {
+    std::vector<size_t> valid;
     valid.reserve(1024);
     
     while (true) {
@@ -194,15 +194,15 @@ void clusterThreadFuncSetcover(unsigned int* assignedCluster) {
             ClusterResult res = setCoverReadyQueue.top();
             setCoverReadyQueue.pop();
             
-            if (assignedCluster[res.representativeId] != UINT_MAX) {
+            if (assignedCluster[res.representativeId] != SIZE_MAX) {
                 continue;
             }
             
             valid.clear();
             size_t originalSize = res.memberIds.size();
             
-            for (unsigned int mem : res.memberIds) {
-                if (assignedCluster[mem] == UINT_MAX) {
+            for (size_t mem : res.memberIds) {
+                if (assignedCluster[mem] == SIZE_MAX) {
                     valid.push_back(mem);
                 }
             }
@@ -217,7 +217,7 @@ void clusterThreadFuncSetcover(unsigned int* assignedCluster) {
                 continue;
             }
             
-            for (unsigned int mem : res.memberIds) {
+            for (size_t mem : res.memberIds) {
                 assignedCluster[mem] = res.representativeId;
             }
         }
@@ -230,7 +230,7 @@ void clusterThreadFuncSetcover(unsigned int* assignedCluster) {
     }
 }
 
-void clusterThreadFuncGreedy(unsigned int* assignedCluster) {
+void clusterThreadFuncGreedy(size_t* assignedCluster) {
     while (true) {
         std::unique_lock<std::mutex> lock(clusterMutex);
         
@@ -250,14 +250,14 @@ void clusterThreadFuncGreedy(unsigned int* assignedCluster) {
             clusterResultQueue.pop();
             currentProcessPosition++;
             
-            if (assignedCluster[result.representativeId] != UINT_MAX) {
+            if (assignedCluster[result.representativeId] != SIZE_MAX) {
                 continue;  
             }
                         
-            std::vector<unsigned int> validMemberIds;
+            std::vector<size_t> validMemberIds;
             validMemberIds.reserve(result.memberIds.size());
-            for (unsigned int memberId : result.memberIds) {
-                if (assignedCluster[memberId] == UINT_MAX) {
+            for (size_t memberId : result.memberIds) {
+                if (assignedCluster[memberId] == SIZE_MAX) {
                     validMemberIds.push_back(memberId);
                 }
             }
@@ -266,7 +266,7 @@ void clusterThreadFuncGreedy(unsigned int* assignedCluster) {
                 continue;
             }
             
-            for (unsigned int memberId : validMemberIds) {
+            for (size_t memberId : validMemberIds) {
                 assignedCluster[memberId] = result.representativeId;
             }
         }
@@ -320,9 +320,9 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
     EvalueComputation evaluer(seqDbr->getAminoAcidDBSize(), subMat);
     int32_t xDrop = (MIN_SIZE * par.gapExtend.values.aminoacid() + par.gapOpen.values.aminoacid());
     
-    unsigned int *assignedCluster = new(std::nothrow) unsigned int[dbSize];
+    size_t *assignedCluster = new(std::nothrow) size_t[dbSize];
     Util::checkAllocation(assignedCluster, "Can not allocate assignedCluster memory in Align2Clust");
-    std::fill_n(assignedCluster, dbSize, UINT_MAX);
+    std::fill_n(assignedCluster, dbSize, SIZE_MAX);
 
     int mode = par.clusteringMode;
     
@@ -394,7 +394,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                                  &evaluer, par.compBiasCorrection, par.compBiasCorrectionScale, 
                                  -par.gapOpen.values.aminoacid(), -par.gapExtend.values.aminoacid());
         char buffer[1024 + 32768 * 4];
-        std::vector<std::pair<unsigned int, unsigned short>> targetsWithDiagonal;
+        std::vector<std::pair<DBKeyType, unsigned short>> targetsWithDiagonal;
         targetsWithDiagonal.reserve(1000);
 
 #pragma omp for schedule(dynamic, 1) nowait
@@ -405,7 +405,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
             targetsWithDiagonal.clear();
             
             size_t representativeId;
-            unsigned int queryKey;
+            DBKeyType queryKey;
             
             if (mode == Parameters::SET_COVER) {
                 representativeId = prefRepSizePair[i].id;
@@ -425,7 +425,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
             blockAligner.initQuery(&query);
             matcher.initQuery(&query);
             
-            if (assignedCluster[representativeId] != UINT_MAX) {
+            if (assignedCluster[representativeId] != SIZE_MAX) {
                 {
                     std::lock_guard<std::mutex> lock(clusterMutex);
                     clusterResultQueue.push(std::move(clusterResult));
@@ -433,11 +433,11 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                 continue;
             }
 
-            unsigned int prefSize = 0;
+            size_t prefSize = 0;
             while (*alignmentData != '\0') {
                 hit_t hit = QueryMatcher::parsePrefilterHit(alignmentData);
                 const size_t targetId = seqDbr->getId(hit.seqId);
-                if (assignedCluster[targetId] == UINT_MAX) { 
+                if (assignedCluster[targetId] == SIZE_MAX) { 
                         targetsWithDiagonal.push_back(std::make_pair(hit.seqId, hit.diagonal));
                 }
                 alignmentData = Util::skipLine(alignmentData);
@@ -446,7 +446,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
             clusterResult.prefSize = prefSize;
 
             for (size_t targetIdx = 0; targetIdx < targetsWithDiagonal.size(); targetIdx++) {
-                const unsigned int targetKey = targetsWithDiagonal[targetIdx].first;
+                const DBKeyType targetKey = targetsWithDiagonal[targetIdx].first;
                 const unsigned short diagonal = targetsWithDiagonal[targetIdx].second;
                 const size_t targetId = seqDbr->getId(targetKey);
                 
@@ -493,7 +493,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                 
                 bool hasSeqId = seqId >= (par.seqIdThr - std::numeric_limits<float>::epsilon());
                 //ugly temporary gyuri
-                if (assignedCluster[targetId] != UINT_MAX) continue;
+                if (assignedCluster[targetId] != SIZE_MAX) continue;
 
                 if (isIdentity || (hasAlnLen && hasCoverage && hasSeqId && hasEvalue)) {
                     Matcher::result_t result = Matcher::result_t(
@@ -507,14 +507,14 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                         const size_t cluId = cluDbr->getId(targetKey);
                         char *cluData = cluDbr->getData(cluId, threadIdx);
                         const size_t cluDataSize = cluDbr->getEntryLen(cluId);
-                        unsigned int numClu = Util::countLines(cluData, cluDataSize);
+                        size_t numClu = Util::countLines(cluData, cluDataSize);
                         bool allpass = true;
                         char buffer[1024];
                         if (numClu > 1) { // if not singleton
                             while (*cluData != '\0') {
                                 Util::parseKey(cluData, buffer);
 
-                                const unsigned int elementKey = (unsigned int) strtoul(buffer, NULL, 10);
+                                const DBKeyType elementKey = Util::fast_atoi<uint64_t>(buffer);
                                 if (elementKey == targetKey) {
                                     cluData = Util::skipLine(cluData);
                                     continue;
@@ -587,7 +587,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                 }
 
                 //ugly temporary gyuri
-                if (assignedCluster[targetId] != UINT_MAX) continue;
+                if (assignedCluster[targetId] != SIZE_MAX) continue;
 
                 bool foundConsecutiveMatchSeed = false;
                 for (int blockIdx = 0; blockIdx <= alignmentLength - 3; ++blockIdx) {
@@ -626,13 +626,13 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                             const size_t cluId = cluDbr->getId(targetKey);
                             char *cluData = cluDbr->getData(cluId, threadIdx);
                             const size_t cluDataSize = cluDbr->getEntryLen(cluId);
-                            unsigned int numClu = Util::countLines(cluData, cluDataSize);
+                            size_t numClu = Util::countLines(cluData, cluDataSize);
                             bool allpass = true;
                             char buffer[1024];
                             if (numClu > 1) { // if not singleton
                                 while (*cluData != '\0') {
                                     Util::parseKey(cluData, buffer);
-                                    const unsigned int elementKey = (unsigned int) strtoul(buffer, NULL, 10);
+                                    const DBKeyType elementKey = Util::fast_atoi<uint64_t>(buffer);
                                     if (elementKey == targetKey) {
                                         cluData = Util::skipLine(cluData);
                                         continue;
@@ -716,18 +716,18 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
     }
 
     for (size_t i = 0; i < dbSize; ++i) {
-        if (assignedCluster[i] == UINT_MAX) {
+        if (assignedCluster[i] == SIZE_MAX) {
             assignedCluster[i] = i;
         }
     }
     
-    std::pair<unsigned int, unsigned int> *assignment = new std::pair<unsigned int, unsigned int>[dbSize];
+    std::pair<DBKeyType, DBKeyType> *assignment = new std::pair<DBKeyType, DBKeyType>[dbSize];
     
 #pragma omp parallel
     {
 #pragma omp for schedule(static)
         for (size_t i = 0; i < dbSize; i++) {
-            if (assignedCluster[i] == UINT_MAX) {
+            if (assignedCluster[i] == SIZE_MAX) {
                 Debug(Debug::ERROR) << "There must be an error: " << i 
                                     << " is not assigned to a cluster\n";
                 continue;
