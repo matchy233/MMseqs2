@@ -11,6 +11,9 @@
 #include "BlockAligner.h"
 #include "Alignment.h"
 #include "AlignmentSymmetry.h"
+#include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -98,6 +101,93 @@ static std::unique_ptr<std::vector<ClusterResult>> elements;
 static size_t currentProcessPosition = 0;
 static size_t currentPrefSize = 0;
 static bool allCalculationsDone = false;
+
+static std::atomic<size_t> align2clustStartedEntries(0);
+static std::atomic<size_t> align2clustCompletedEntries(0);
+static std::atomic<size_t> align2clustAssignedEntries(0);
+static std::atomic<size_t> align2clustMaxLoopIndex(0);
+static std::mutex align2clustProgressMutex;
+static std::condition_variable align2clustProgressCondition;
+static bool align2clustProgressDone = false;
+static Timer align2clustProgressTimer;
+static const int ALIGN2CLUST_PROGRESS_REPORT_INTERVAL_SECONDS = 3600;
+
+static void updateAlign2clustMaxLoopIndex(size_t loopIndex) {
+    size_t previous = align2clustMaxLoopIndex.load(std::memory_order_relaxed);
+    while (loopIndex > previous &&
+           align2clustMaxLoopIndex.compare_exchange_weak(previous, loopIndex,
+                                                         std::memory_order_relaxed,
+                                                         std::memory_order_relaxed) == false) {
+    }
+}
+
+struct Align2clustLoopProgress {
+    explicit Align2clustLoopProgress(size_t loopIndex) {
+        align2clustStartedEntries.fetch_add(1, std::memory_order_relaxed);
+        updateAlign2clustMaxLoopIndex(loopIndex);
+    }
+
+    ~Align2clustLoopProgress() {
+        align2clustCompletedEntries.fetch_add(1, std::memory_order_relaxed);
+    }
+};
+
+static void logAlign2clustProgress(const char *label, size_t endRange) {
+    size_t currentProcessPositionSnapshot = 0;
+    size_t currentPrefSizeSnapshot = 0;
+    size_t clusterResultQueueSize = 0;
+    size_t setCoverReadyQueueSize = 0;
+    bool allCalculationsDoneSnapshot = false;
+
+    {
+        std::lock_guard<std::mutex> lock(clusterMutex);
+        currentProcessPositionSnapshot = currentProcessPosition;
+        currentPrefSizeSnapshot = currentPrefSize;
+        clusterResultQueueSize = clusterResultQueue.size();
+        setCoverReadyQueueSize = setCoverReadyQueue.size();
+        allCalculationsDoneSnapshot = allCalculationsDone;
+    }
+
+    const size_t started = align2clustStartedEntries.load(std::memory_order_relaxed);
+    const size_t completed = align2clustCompletedEntries.load(std::memory_order_relaxed);
+    const size_t assigned = align2clustAssignedEntries.load(std::memory_order_relaxed);
+    const size_t maxLoopIndex = align2clustMaxLoopIndex.load(std::memory_order_relaxed);
+    const double elapsed = align2clustProgressTimer.getTimediff();
+    const double completedPercent = (endRange == 0) ? 100.0 : (100.0 * static_cast<double>(completed) / static_cast<double>(endRange));
+    const double completedPerSecond = (elapsed > 0.0) ? (static_cast<double>(completed) / elapsed) : 0.0;
+
+    char completedPercentBuffer[32];
+    char completedRateBuffer[32];
+    snprintf(completedPercentBuffer, sizeof(completedPercentBuffer), "%.2f", completedPercent);
+    snprintf(completedRateBuffer, sizeof(completedRateBuffer), "%.2f", completedPerSecond);
+
+    Debug(Debug::INFO) << "Align2clust progress (" << label << "): elapsed=" << align2clustProgressTimer.lapProgress()
+                       << " started=" << started << "/" << endRange
+                       << " completed=" << completed << "/" << endRange
+                       << " completedPercent=" << completedPercentBuffer
+                       << " completedPerSecond=" << completedRateBuffer
+                       << " maxLoopIndex=" << maxLoopIndex
+                       << " currentProcessPosition=" << currentProcessPositionSnapshot
+                       << " currentPrefSize=" << currentPrefSizeSnapshot
+                       << " clusterResultQueue=" << clusterResultQueueSize
+                       << " setCoverReadyQueue=" << setCoverReadyQueueSize
+                       << " assignedClusterEntries=" << assigned
+                       << " allCalculationsDone=" << allCalculationsDoneSnapshot
+                       << "\n";
+}
+
+static void align2clustProgressThreadFunc(size_t endRange) {
+    while (true) {
+        std::unique_lock<std::mutex> lock(align2clustProgressMutex);
+        if (align2clustProgressCondition.wait_for(
+                lock, std::chrono::seconds(ALIGN2CLUST_PROGRESS_REPORT_INTERVAL_SECONDS),
+                [] { return align2clustProgressDone; })) {
+            break;
+        }
+        lock.unlock();
+        logAlign2clustProgress("periodic", endRange);
+    }
+}
 
 static float parsePrecisionLib(const std::string &scoreFile, double targetSeqid, double targetCov, double targetPrecision) {
     std::stringstream in(scoreFile);
@@ -219,6 +309,7 @@ void clusterThreadFuncSetcover(size_t* assignedCluster) {
             
             for (size_t mem : res.memberIds) {
                 assignedCluster[mem] = res.representativeId;
+                align2clustAssignedEntries.fetch_add(1, std::memory_order_relaxed);
             }
         }
         
@@ -268,6 +359,7 @@ void clusterThreadFuncGreedy(size_t* assignedCluster) {
             
             for (size_t memberId : validMemberIds) {
                 assignedCluster[memberId] = result.representativeId;
+                align2clustAssignedEntries.fetch_add(1, std::memory_order_relaxed);
             }
         }
     }
@@ -342,7 +434,25 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
         delete seqDbr;
         return EXIT_FAILURE;
     }
-    
+
+    {
+        std::lock_guard<std::mutex> lock(clusterMutex);
+        clusterResultQueue = std::priority_queue<ClusterResult, std::vector<ClusterResult>, GreedyComparator>();
+        setCoverReadyQueue = std::priority_queue<ClusterResult, std::vector<ClusterResult>, SetCoverComparator>();
+        currentProcessPosition = 0;
+        currentPrefSize = 0;
+        allCalculationsDone = false;
+    }
+    align2clustStartedEntries.store(0, std::memory_order_relaxed);
+    align2clustCompletedEntries.store(0, std::memory_order_relaxed);
+    align2clustAssignedEntries.store(0, std::memory_order_relaxed);
+    align2clustMaxLoopIndex.store(0, std::memory_order_relaxed);
+    {
+        std::lock_guard<std::mutex> lock(align2clustProgressMutex);
+        align2clustProgressDone = false;
+    }
+    align2clustProgressTimer.reset();
+
     std::thread clusterThread(clusterThreadFunc, assignedCluster);
     
     Timer timer;
@@ -377,6 +487,11 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
     size_t endRange = (mode == Parameters::SET_COVER) ? dbSize : alnDbr.getSize();
     unsigned int swMode = Alignment::initSWMode(par.alignmentMode, par.covThr, par.seqIdThr);
     Debug::Progress progress(endRange);
+    Debug(Debug::INFO) << "Align2clust progress reporting every "
+                       << ALIGN2CLUST_PROGRESS_REPORT_INTERVAL_SECONDS
+                       << " seconds: mainPassEntries=" << endRange
+                       << " sequenceDbSize=" << dbSize << "\n";
+    std::thread align2clustProgressThread(align2clustProgressThreadFunc, endRange);
     size_t db_maxseqlen = (cluSeqDbr != nullptr)
         ? std::max(seqDbr->getMaxSeqLen(), cluSeqDbr->getMaxSeqLen())
         : seqDbr->getMaxSeqLen();
@@ -403,6 +518,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
 #pragma omp for schedule(dynamic, 1) nowait
         for (size_t i = 0; i < endRange; i++) {
             progress.updateProgress();
+            Align2clustLoopProgress loopProgress(i);
             ClusterResult clusterResult;
             clusterResult.sequenceIdx = i;
             targetsWithDiagonal.clear();
@@ -702,12 +818,24 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
         clusterThread.join(); 
     }
 
+    {
+        std::lock_guard<std::mutex> lock(align2clustProgressMutex);
+        align2clustProgressDone = true;
+    }
+    align2clustProgressCondition.notify_one();
+    if (align2clustProgressThread.joinable()) {
+        align2clustProgressThread.join();
+    }
+    logAlign2clustProgress("final-main-pass", endRange);
+
     for (size_t i = 0; i < dbSize; ++i) {
         if (assignedCluster[i] == SIZE_MAX) {
             assignedCluster[i] = i;
+            align2clustAssignedEntries.fetch_add(1, std::memory_order_relaxed);
         }
     }
-    
+    logAlign2clustProgress("final-with-singletons", endRange);
+
     std::pair<DBKeyType, DBKeyType> *assignment = new std::pair<DBKeyType, DBKeyType>[dbSize];
     
 #pragma omp parallel
