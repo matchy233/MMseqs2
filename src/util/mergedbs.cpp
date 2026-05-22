@@ -40,7 +40,7 @@ int mergedbs(int argc, const char **argv, const Command& command) {
         writer.writeStart(0);
         for (size_t i = 0; i < fileCount; i++) {
             size_t entryId = filesToMerge[i]->getId(key);
-            if (entryId == UINT_MAX) {
+            if (entryId == DB_ENTRY_NOT_FOUND) {
                 continue;
             }
             const char *data = filesToMerge[i]->getData(entryId, 0);

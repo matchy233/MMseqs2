@@ -56,6 +56,34 @@ int Util::readMapping(std::string mappingFilename, std::vector<std::pair<unsigne
     return isSorted;
 }
 
+int Util::readMappingDBKey(std::string mappingFilename, std::vector<std::pair<DBKeyType, DBKeyType>> & mapping){
+    MemoryMapped indexData(mappingFilename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    if (!indexData.isValid()){
+        Debug(Debug::ERROR) << "Could not open index file " << mappingFilename << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+
+    size_t currPos = 0;
+    char* indexDataChar = (char *) indexData.getData();
+    const char* cols[3];
+    size_t isSorted = true;
+    DBKeyType prevId=0;
+    while (currPos < indexData.size()){
+        Util::getWordsOfLine(indexDataChar, cols, 2 );
+        DBKeyType id = Util::fast_atoi<DBKeyType>(cols[0]);
+        isSorted *= (id >= prevId);
+        DBKeyType taxid = Util::fast_atoi<DBKeyType>(cols[1]);
+        indexDataChar = Util::skipLine(indexDataChar);
+        mapping.push_back(std::make_pair(id, taxid));
+        currPos = indexDataChar - (char *) indexData.getData();
+
+        prevId = id;
+    }
+    indexData.close();
+
+    return isSorted;
+}
+
 size_t Util::countLines(const char *data, size_t length) {
     size_t newlines = 0;
     for (size_t i = 0; i < length; i++ ) {

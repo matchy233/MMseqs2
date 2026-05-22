@@ -3,7 +3,11 @@
 #include "CommandDeclarations.h"
 #include "DownloadDatabase.h"
 
+#ifdef MMSEQS_INT64_IDS
+const char* MMSEQS_CURRENT_INDEX_VERSION = "16-64";
+#else
 const char* MMSEQS_CURRENT_INDEX_VERSION = "16";
+#endif
 
 Parameters& par = Parameters::getInstance();
 std::vector<Command> baseCommands = {

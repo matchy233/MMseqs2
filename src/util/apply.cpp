@@ -103,11 +103,11 @@ pid_t create_pipe(
     return pid;
 }
 
-int apply_by_entry(char* data, size_t size, unsigned int key, DBWriter& writer,
+int apply_by_entry(char* data, size_t size, DBKeyType key, DBWriter& writer,
                    const char* program_name, char ** program_argv, char **environ, unsigned int proc_idx) {
     // only works with the environ we construct ourselves
     // local_environment() leaves the first element free to use for ourselves
-    snprintf(environ[0], 64, "MMSEQS_ENTRY_NAME=%d", key);
+    snprintf(environ[0], 64, "MMSEQS_ENTRY_NAME=%llu", static_cast<unsigned long long>(key));
 
     bool write_closed = false;
     int fd[2];

@@ -14,14 +14,14 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     // read in database keys for the new database entries and validate that we have enough
-    std::vector<unsigned int> keys;
+    std::vector<DBKeyType> keys;
     {
         std::vector<std::string> ids = Util::split(par.idList, ",");
         keys.reserve(ids.size());
         for (size_t i = 0; i < ids.size(); ++i) {
             char *rest;
             errno = 0;
-            unsigned int key = strtoul(ids[i].c_str(), &rest, 10);
+            DBKeyType key = strtoull(ids[i].c_str(), &rest, 10);
             if ((rest != ids[i].c_str() && *rest != '\0') || errno == ERANGE) {
                 Debug(Debug::ERROR) << "Could not read key " << ids[i] << "\n";
                 return EXIT_FAILURE;
@@ -33,7 +33,7 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
             return EXIT_FAILURE;
         }
         // fail early if duplicates are found
-        std::vector<unsigned int> check(keys.begin(), keys.end());
+        std::vector<DBKeyType> check(keys.begin(), keys.end());
         std::sort(check.begin(), check.end());
         for (size_t i = 1; i < check.size(); ++i) {
             if (check[i - 1] == check[i] || (check[i - 1] + 1) == check[i]) {
@@ -66,11 +66,11 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
         outReader.open(DBReader<DBKeyType>::NOSORT);
         // validate that given keys dont exist already
         for (size_t i = 0; i < keys.size(); ++i) {
-            if (outReader.getId(keys[i]) != UINT_MAX) {
+            if (outReader.getId(keys[i]) != DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::ERROR) << "Key " << keys[i] << " already exists in database\n";
                 return EXIT_FAILURE;
             }
-            if (outReader.getId(keys[i]+1) != UINT_MAX) {
+            if (outReader.getId(keys[i]+1) != DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::ERROR) << "Key " << (keys[i]+1) << " already exists in database\n";
                 return EXIT_FAILURE;
             }
@@ -83,7 +83,7 @@ int appenddbtoindex(int argc, const char **argv, const Command &command) {
     char buffer[8192];
     FILE* outIndexHandle = FileUtil::openFileOrDie(outIndexName.c_str(), "a", true);
     for (size_t i = 0; i < par.filenames.size(); ++i) {
-        const unsigned int key = keys[i];
+        const DBKeyType key = keys[i];
         const std::string& inDb = par.filenames[i];
         const std::string inIndexName = inDb + ".index";
 

@@ -15,7 +15,7 @@
 #include <omp.h>
 #endif
 
-void handleSingleFrame(TranslateNucl& translateNucl, DBWriter& sequenceWriter, DBWriter& headerWriter, unsigned int key, char* headerBuffer, const char* data, size_t seqLen, int frame, bool reverse, bool translate, char*& aaBuffer, size_t& aaBufferSize, int thread_idx) {
+void handleSingleFrame(TranslateNucl& translateNucl, DBWriter& sequenceWriter, DBWriter& headerWriter, DBKeyType key, char* headerBuffer, const char* data, size_t seqLen, int frame, bool reverse, bool translate, char*& aaBuffer, size_t& aaBufferSize, int thread_idx) {
     data = data + frame;
     seqLen = seqLen - frame;
     if (translate == true) {
@@ -96,7 +96,7 @@ int extractframes(int argc, const char **argv, const Command& command) {
         std::string reverseComplementStr;
         reverseComplementStr.reserve(32000);
 
-        for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
+        for (size_t i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
 
             DBKeyType key = reader.getDbKey(i);
@@ -169,4 +169,3 @@ int extractframes(int argc, const char **argv, const Command& command) {
 
     return EXIT_SUCCESS;
 }
-

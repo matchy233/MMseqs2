@@ -47,18 +47,26 @@ int createclusearchdb(int argc, const char **argv, const Command& command) {
             for (size_t id = 0; id < clusterReader.getSize(); id++) {
                 progress.updateProgress();
                 char *data = clusterReader.getData(id, thread_idx);
-                size_t repKey = clusterReader.getDbKey(id);
+                DBKeyType repKey = clusterReader.getDbKey(id);
                 size_t repDataId = reader.getId(repKey);
+                if (repDataId == DB_ENTRY_NOT_FOUND) {
+                    Debug(Debug::ERROR) << "Representative " << repKey << " does not exist in sequence database.\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 size_t repEntryLen = reader.getEntryLen(repDataId);
                 dbwRep.writeData(reader.getData(repDataId, thread_idx), repEntryLen - 1, repKey, thread_idx);
                 while (*data != '\0') {
                     // parse dbkey
-                    size_t dbKey = Util::fast_atoi<unsigned int>(data);
+                    DBKeyType dbKey = Util::fast_atoi<DBKeyType>(data);
                     if (dbKey == repKey) {
                         data = Util::skipLine(data);
                         continue;
                     }
                     size_t readerId = reader.getId(dbKey);
+                    if (readerId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Cluster member " << dbKey << " does not exist in sequence database.\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     dbwClu.writeData(reader.getData(readerId, thread_idx),
                                      reader.getEntryLen(readerId) - 1, dbKey, thread_idx);
                     data = Util::skipLine(data);

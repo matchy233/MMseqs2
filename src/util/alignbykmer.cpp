@@ -193,9 +193,14 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                 progress.updateProgress();
 
                 char *data = dbr_res.getData(id, thread_idx);
-                DBKeyType queryId = qdbr->getId(dbr_res.getDbKey(id));
+                DBKeyType queryKey = dbr_res.getDbKey(id);
+                size_t queryId = qdbr->getId(queryKey);
+                if (queryId == DB_ENTRY_NOT_FOUND) {
+                    Debug(Debug::ERROR) << "Invalid query key " << queryKey << ".\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 char *querySeq = qdbr->getData(queryId, thread_idx);
-                query.mapSequence(id, queryId, querySeq, qdbr->getSeqLen(id));
+                query.mapSequence(queryId, queryKey, querySeq, qdbr->getSeqLen(queryId));
 
                 while (query.hasNextKmer()) {
                     const unsigned char *kmer = query.nextKmer();
@@ -216,8 +221,12 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                 while (*data != '\0') {
                     // DB key of the db sequence
                     Util::parseKey(data, dbKeyBuffer);
-                    const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
-                    unsigned int targetId = tdbr->getId(dbKey);
+                    const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(dbKeyBuffer);
+                    size_t targetId = tdbr->getId(dbKey);
+                    if (targetId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid target key " << dbKey << " in result entry " << queryKey << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     char *targetSeq = tdbr->getData(targetId, thread_idx);
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameDB)) ? true : false;
                     target.mapSequence(targetId, dbKey, targetSeq, tdbr->getSeqLen(targetId));
@@ -508,5 +517,3 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
     }
     return EXIT_SUCCESS;
 }
-
-

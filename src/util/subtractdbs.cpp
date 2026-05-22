@@ -48,7 +48,7 @@ int subtractdbs(int argc, const char **argv, const Command& command) {
 #pragma omp  for schedule(dynamic, 10)
         for (size_t id = 0; id < leftDbr.getSize(); id++) {
             progress.updateProgress();
-            std::map<unsigned int, bool> elementLookup;
+            std::map<DBKeyType, bool> elementLookup;
             const char *leftData = leftDbr.getData(id, thread_idx);
             DBKeyType leftDbKey = leftDbr.getDbKey(id);
 
@@ -57,7 +57,7 @@ int subtractdbs(int argc, const char **argv, const Command& command) {
                 char *data = (char *) leftData;
                 while (*data != '\0') {
                     Util::parseKey(data, key);
-                    unsigned int dbKey = std::strtoul(key, NULL, 10);
+                    DBKeyType dbKey = Util::fast_atoi<DBKeyType>(key);
                     double evalue = 0.0;
                     const size_t columns = Util::getWordsOfLine(data, entry, 255);
                     // its an aln result (parse e-value)
@@ -77,7 +77,7 @@ int subtractdbs(int argc, const char **argv, const Command& command) {
             if (data != NULL) {
                 while (*data != '\0') {
                     Util::parseKey(data, key);
-                    unsigned int element = std::strtoul(key, NULL, 10);
+                    DBKeyType element = Util::fast_atoi<DBKeyType>(key);
                     double evalue = 0.0;
                     const size_t columns = Util::getWordsOfLine(data, entry, 255);
                     if (columns >= Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
@@ -96,7 +96,7 @@ int subtractdbs(int argc, const char **argv, const Command& command) {
                     char *start = data;
                     data = Util::skipLine(data);
                     Util::parseKey(start, key);
-                    unsigned int elementIdx = std::strtoul(key, NULL, 10);
+                    DBKeyType elementIdx = Util::fast_atoi<DBKeyType>(key);
                     if (elementLookup[elementIdx]) {
                         result.append(start, data - start);
                     }

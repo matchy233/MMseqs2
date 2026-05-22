@@ -14,9 +14,9 @@
 
 class ClusteringAlgorithms {
 public:
-    ClusteringAlgorithms(DBReader<DBKeyType>* seqDbr, DBReader<DBKeyType>* alnDbr, int threads,int scoretype, int maxiterations, unsigned int *keyToSet, size_t *sourceOffsets, unsigned int **sourceLookupTable, unsigned int *sourceList, unsigned int sourceLen, bool needSET);
+    ClusteringAlgorithms(DBReader<DBKeyType>* seqDbr, DBReader<DBKeyType>* alnDbr, int threads,int scoretype, int maxiterations, DBKeyType *keyToSet, size_t *sourceOffsets, DBKeyType **sourceLookupTable, DBKeyType *sourceList, size_t sourceLen, bool needSET);
     ~ClusteringAlgorithms();
-    std::pair<unsigned int, unsigned int> * execute(int mode);
+    std::pair<DBKeyType, DBKeyType> * execute(int mode);
 private:
     DBReader<DBKeyType>* seqDbr;
 
@@ -26,40 +26,40 @@ private:
     int threads;
     int scoretype;
 //datastructures
-    unsigned int maxClustersize;
-    unsigned int dbSize;
-    int * clustersizes;
-    unsigned int* sorted_clustersizes;
-    unsigned int* clusterid_to_arrayposition;
-    unsigned int* borders_of_set;
-    unsigned int* keyToSet;
+    size_t maxClustersize;
+    size_t dbSize;
+    int64_t * clustersizes;
+    DBLocalId* sorted_clustersizes;
+    size_t* clusterid_to_arrayposition;
+    size_t* borders_of_set;
+    DBKeyType* keyToSet;
     size_t* sourceOffsets;
-    unsigned int** sourceLookupTable;
-    unsigned int* sourceList;
-    unsigned int sourceLen;
+    DBKeyType** sourceLookupTable;
+    DBKeyType* sourceList;
+    size_t sourceLen;
 
 //methods
 
     void initClustersizes();
 
-    void removeClustersize(unsigned int clusterid);
+    void removeClustersize(DBLocalId clusterid);
 
-    void decreaseClustersize(unsigned int clusterid);
+    void decreaseClustersize(DBLocalId clusterid);
 //for connected component
     int maxiterations;
 
 
-    void setCover(unsigned int **elementLookup, unsigned short ** elementScoreLookupTable,
-                  unsigned int *assignedcluster, short *bestscore, size_t *offsets);
+    void setCover(DBLocalId **elementLookup, unsigned short ** elementScoreLookupTable,
+                  DBLocalId *assignedcluster, short *bestscore, size_t *offsets);
 
-    void greedyIncremental(unsigned int **elementLookupTable, size_t *elementOffsets,
-                           size_t n, unsigned int *assignedcluster) ;
-
-
-    void greedyIncrementalLowMem(unsigned int *assignedcluster) ;
+    void greedyIncremental(DBLocalId **elementLookupTable, size_t *elementOffsets,
+                           size_t n, DBLocalId *assignedcluster) ;
 
 
-    void readInClusterData(unsigned int **elementLookupTable, unsigned int *&elements,
+    void greedyIncrementalLowMem(DBLocalId *assignedcluster) ;
+
+
+    void readInClusterData(DBLocalId **elementLookupTable, DBLocalId *&elements,
                            unsigned short **scoreLookupTable, unsigned short *&scores,
                            size_t *elementOffsets, size_t totalElementCount)  ;
 

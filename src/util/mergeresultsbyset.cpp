@@ -51,9 +51,9 @@ int mergeresultsbyset(int argc, const char **argv, const Command &command) {
             // go through the results in the cluster and add them to one entry
             while (*data != '\0'){
                 Util::parseKey(data, dbKey);
-                unsigned int key = Util::fast_atoi<unsigned int>(dbKey);
+                DBKeyType key = Util::fast_atoi<DBKeyType>(dbKey);
                 size_t id = resultReader.sequenceReader->getId(key);
-                if (id == UINT_MAX) {
+                if (id == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::ERROR) << "Invalid key " << key << " in entry " << i << ".\n";
                     EXIT(EXIT_FAILURE);
                 }

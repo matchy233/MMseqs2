@@ -59,14 +59,14 @@ int createseqfiledb(int argc, const char **argv, const Command &command) {
                 Util::parseKey(data, dbKey);
                 data = Util::skipLine(data);
 
-                const unsigned int memberKey = (unsigned int) strtoul(dbKey, NULL, 10);
+                const DBKeyType memberKey = Util::fast_atoi<DBKeyType>(dbKey);
                 size_t headerId = headerDb.getId(memberKey);
-                if (headerId == UINT_MAX) {
+                if (headerId == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::ERROR) << "Entry " << key << " does not contain a sequence!" << "\n";
                     EXIT(EXIT_FAILURE);
                 }
                 size_t seqId = seqDb.getId(memberKey);
-                if (seqId == UINT_MAX) {
+                if (seqId == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::ERROR) << "Entry " << key << " does not contain a sequence!" << "\n";
                     EXIT(EXIT_FAILURE);
                 }
@@ -74,14 +74,14 @@ int createseqfiledb(int argc, const char **argv, const Command &command) {
                     char *header = headerDb.getData(headerId, thread_idx);
                     size_t headerLen = headerDb.getEntryLen(headerId) - 1;
                     size_t accessionLen = Util::skipNoneWhitespace(header);
-                    char *sequence = seqDb.getData(headerId, thread_idx);
-                    size_t sequenceLen = seqDb.getEntryLen(headerId) - 1;
+                    char *sequence = seqDb.getData(seqId, thread_idx);
+                    size_t sequenceLen = seqDb.getEntryLen(seqId) - 1;
                     result.append(1, '#');
                     result.append(header, headerLen);
                     result.append(1, '>');
                     result.append(header, accessionLen);
                     result.append("_consensus\n");
-                    result.append(sequence, seqDb.getEntryLen(headerId) - 1);
+                    result.append(sequence, seqDb.getEntryLen(seqId) - 1);
                     result.append(1, '>');
                     result.append(header, headerLen);
                     result.append(sequence, sequenceLen);

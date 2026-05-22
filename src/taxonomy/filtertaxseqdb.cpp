@@ -48,7 +48,7 @@ int filtertaxseqdb(int argc, const char **argv, const Command& command) {
             size_t length = reader.getEntryLen(i);
 
             // match dbKey to its taxon based on mapping
-            unsigned int taxon = mapping.lookup(key);
+            TaxID taxon = mapping.lookup(key);
 
             // if taxon is a descendent of the requested taxid, it will be retained.
             // e.g. if in taxonomyExpression taxid=2 (bacteria) and taxon=562 (E.coli) 

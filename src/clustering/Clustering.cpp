@@ -28,7 +28,7 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
         SequenceWeights *sequenceWeights = new SequenceWeights(sequenceWeightFile.c_str());
         float *localid2weight = new float[seqDbr->getSize()];
         for (size_t id = 0; id < seqDbr->getSize(); id++) {
-            size_t key = seqDbr->getDbKey(id);
+            DBKeyType key = seqDbr->getDbKey(id);
             localid2weight[id] = sequenceWeights->getWeightById(key);
         }
         seqDbr->sortIndex(localid2weight);
@@ -45,30 +45,30 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
             
             std::ifstream mappingStream(seqDB + ".lookup");
             std::string line;
-            unsigned int setkey = 0;
-            unsigned int maxsetkey = 0;
-            unsigned int maxkey = 0;
+            DBKeyType setkey = 0;
+            DBKeyType maxsetkey = 0;
+            DBKeyType maxkey = 0;
             while (std::getline(mappingStream, line)) {
                 std::vector<std::string> split = Util::split(line, "\t");
-                unsigned int key = strtoul(split[0].c_str(), NULL, 10);
-                setkey = strtoul(split[2].c_str(), NULL, 10);
+                DBKeyType key = Util::fast_atoi<DBKeyType>(split[0].c_str());
+                setkey = Util::fast_atoi<DBKeyType>(split[2].c_str());
                 if (maxsetkey < setkey) {
                     maxsetkey = setkey;
                 }
                 maxkey = key;
             }
-            unsigned int lastKey = maxkey;
-            keyToSet = new unsigned int[lastKey+1];
+            DBKeyType lastKey = maxkey;
+            keyToSet = new DBKeyType[lastKey+1];
             std::vector<bool> keysInSeq(lastKey+1, false);
-            std::map<unsigned int, unsigned int> setToLength;
+            std::map<DBKeyType, size_t> setToLength;
 
             mappingStream.close();
             mappingStream.open(seqDB + ".lookup");
             line = "";
             while (std::getline(mappingStream, line)) {
                 std::vector<std::string> split = Util::split(line, "\t");
-                unsigned int key = strtoul(split[0].c_str(), NULL, 10);
-                setkey = strtoul(split[2].c_str(), NULL, 10);
+                DBKeyType key = Util::fast_atoi<DBKeyType>(split[0].c_str());
+                setkey = Util::fast_atoi<DBKeyType>(split[2].c_str());
                 keyToSet[key] = setkey;
             }
 
@@ -76,11 +76,11 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
                 setToLength[keyToSet[seqIndex[id].id]] += seqIndex[id].length;
                 keysInSeq[seqIndex[id].id] = 1;
             }
-            unsigned int sourceLen = maxsetkey + 1;
+            size_t sourceLen = maxsetkey + 1;
             seqnum = setToLength.size();
-            sourceList = new(std::nothrow) unsigned int[lastKey + 1];
+            sourceList = new(std::nothrow) DBKeyType[lastKey + 1];
             sourceOffsets = new(std::nothrow) size_t[sourceLen + 1]();
-            sourceLookupTable = new(std::nothrow) unsigned int *[sourceLen];
+            sourceLookupTable = new(std::nothrow) DBKeyType *[sourceLen];
             size_t * sourceOffsetsDecrease = new(std::nothrow) size_t[sourceLen + 1]();
 
             mappingStream.close();
@@ -89,12 +89,12 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
             line = "";
             while (std::getline(mappingStream, line)) {
                 std::vector<std::string> split = Util::split(line, "\t");
-                setkey = strtoul(split[2].c_str(), NULL, 10);
+                setkey = Util::fast_atoi<DBKeyType>(split[2].c_str());
                 sourceOffsets[setkey]++;
                 sourceOffsetsDecrease[setkey]++;
             }
             AlignmentSymmetry::computeOffsetFromCounts(sourceOffsets, sourceLen);
-            AlignmentSymmetry::setupPointers<unsigned int>(sourceList, sourceLookupTable, sourceOffsets, sourceLen, lastKey + 1);
+            AlignmentSymmetry::setupPointers<DBKeyType>(sourceList, sourceLookupTable, sourceOffsets, sourceLen, lastKey + 1);
             
             mappingStream.close();
             mappingStream.open(seqDB + ".lookup");
@@ -102,20 +102,20 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
             line = "";
             while (std::getline(mappingStream, line)) {
                 std::vector<std::string> split = Util::split(line, "\t");
-                unsigned int key = strtoul(split[0].c_str(), NULL, 10);
-                setkey = strtoul(split[2].c_str(), NULL, 10);
+                DBKeyType key = Util::fast_atoi<DBKeyType>(split[0].c_str());
+                setkey = Util::fast_atoi<DBKeyType>(split[2].c_str());
                 size_t order = sourceOffsets[setkey + 1] - sourceOffsetsDecrease[setkey];
                 if(keysInSeq[key] == 1) {
                     sourceList[order] = key;
                 } else {
-                    sourceList[order] = UINT_MAX;
+                    sourceList[order] = DB_KEY_INVALID;
                 }
                 sourceOffsetsDecrease[setkey]--;
             }
             char* data = (char*)malloc(
                 sizeof(size_t) +
                 sizeof(size_t) +
-                sizeof(unsigned int) +
+                sizeof(DBKeyType) +
                 sizeof(int) +
                 sizeof(unsigned int) +
                 sizeof(DBReader<DBKeyType>::Index) * seqnum
@@ -137,8 +137,8 @@ Clustering::Clustering(const std::string &seqDB, const std::string &seqDBIndex,
             p += sizeof(size_t);
             *((size_t*)p) = 0;
             p += sizeof(size_t);
-            *((unsigned int*)p) = indexStorage[seqnum-1]->id;
-            p += sizeof(unsigned int);
+            *((DBKeyType*)p) = indexStorage[seqnum-1]->id;
+            p += sizeof(DBKeyType);
             *((int*)p) = originalseqDbr->getDbtype();
             p += sizeof(int);
             *((unsigned int*)p) = indexStorage[0]->length;
@@ -189,7 +189,7 @@ void Clustering::run(int mode) {
     }
     dbw->open();
 
-    std::pair<unsigned int, unsigned int> * ret;
+    std::pair<DBKeyType, DBKeyType> * ret;
     ClusteringAlgorithms *algorithm = new ClusteringAlgorithms(seqDbr, alnDbr,
                                                                threads, similarityScoreType,
                                                                maxIteration, keyToSet, sourceOffsets, sourceLookupTable, sourceList, seqnum, needSET);
@@ -236,33 +236,33 @@ void Clustering::run(int mode) {
 
 }
 
-void Clustering::writeData(DBWriter *dbw, const std::pair<unsigned int, unsigned int> * ret, size_t dbSize) {
+void Clustering::writeData(DBWriter *dbw, const std::pair<DBKeyType, DBKeyType> * ret, size_t dbSize) {
     std::string resultStr;
     resultStr.reserve(1024*1024*1024);
     char buffer[32];
-    unsigned int prevRepresentativeKey = UINT_MAX;
+    DBKeyType prevRepresentativeKey = DB_KEY_INVALID;
     for(size_t i = 0; i < dbSize; i++){
-        unsigned int currRepresentativeKey = ret[i].first;
+        DBKeyType currRepresentativeKey = ret[i].first;
         // write query key first
         if(prevRepresentativeKey != currRepresentativeKey) {
-            if(prevRepresentativeKey != UINT_MAX){ // skip first
+            if(prevRepresentativeKey != DB_KEY_INVALID){ // skip first
                 dbw->writeData(resultStr.c_str(), resultStr.length(), prevRepresentativeKey);
             }
             resultStr.clear();
-            char *outpos = Itoa::u32toa_sse2(currRepresentativeKey, buffer);
+            char *outpos = Itoa::u64toa_sse2(static_cast<uint64_t>(currRepresentativeKey), buffer);
             resultStr.append(buffer, (outpos - buffer - 1));
             resultStr.push_back('\n');
         }
-        unsigned int memberKey = ret[i].second;
+        DBKeyType memberKey = ret[i].second;
         if(memberKey != currRepresentativeKey){
-            char * outpos = Itoa::u32toa_sse2(memberKey, buffer);
+            char * outpos = Itoa::u64toa_sse2(static_cast<uint64_t>(memberKey), buffer);
             resultStr.append(buffer, (outpos - buffer - 1) );
             resultStr.push_back('\n');
         }
 
         prevRepresentativeKey = currRepresentativeKey;
     }
-    if(prevRepresentativeKey != UINT_MAX){
+    if(prevRepresentativeKey != DB_KEY_INVALID){
         dbw->writeData(resultStr.c_str(), resultStr.length(), prevRepresentativeKey);
     }
 }

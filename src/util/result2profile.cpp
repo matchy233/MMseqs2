@@ -183,7 +183,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
 
             DBKeyType queryKey = resultReader.getDbKey(id);
             size_t queryId = qDbr->getId(queryKey);
-            if (queryId == UINT_MAX) {
+            if (queryId == DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::WARNING) << "Invalid query sequence " << queryKey << "\n";
                 continue;
             }
@@ -193,7 +193,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
             char *data = resultReader.getData(id, thread_idx);
             while (*data != '\0') {
                 Util::parseKey(data, dbKey);
-                const unsigned int key = (unsigned int) strtoul(dbKey, NULL, 10);
+                const DBKeyType key = Util::fast_atoi<DBKeyType>(dbKey);
                 // in the same database case, we have the query repeated
                 if (key == queryKey && sameDatabase == true) {
                     if(returnAlnRes && par.includeIdentity){
@@ -214,7 +214,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
 
                 if (returnAlnRes == true || evalue < par.evalProfile) {
                     const size_t edgeId = tDbr->getId(key);
-                    if (edgeId == UINT_MAX) {
+                    if (edgeId == DB_ENTRY_NOT_FOUND) {
                         Debug(Debug::ERROR) << "Sequence " << key << " does not exist in target sequence database\n";
                         EXIT(EXIT_FAILURE);
                     }
@@ -336,4 +336,3 @@ int result2profile(int argc, const char **argv, const Command &command) {
 int filterresult(int argc, const char **argv, const Command &command) {
     return result2profile(argc, argv, command, true);
 }
-

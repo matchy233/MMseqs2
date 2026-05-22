@@ -97,7 +97,11 @@ int makepaddedseqdb(int argc, const char **argv, const Command &command) {
         }
         dbsw.writeIndexEntry(firstIt + seqKey, start, seq.L + 2, thread_idx);
 
-        unsigned int headerId = dbhr.getId(key);
+        size_t headerId = dbhr.getId(key);
+        if (headerId == DB_ENTRY_NOT_FOUND) {
+            Debug(Debug::ERROR) << "Invalid header key " << key << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
         dbhw.writeData(dbhr.getData(headerId, thread_idx), dbhr.getEntryLen(headerId), firstIt + seqKey, thread_idx, false);
 
         seqKey++;
@@ -120,9 +124,9 @@ int makepaddedseqdb(int argc, const char **argv, const Command &command) {
         buffer.reserve(2048);
         DBReader<DBKeyType>::LookupEntry entry;
         size_t totalSize = dbr.getSize();
-        for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
+        for (size_t id = 0; id < readerHeader.getSize(); id++) {
             char *header = readerHeader.getData(id, 0);
-            entry.id = id;
+            entry.id = static_cast<DBKeyType>(id);
             entry.entryName = Util::parseFastaHeader(header);
             entry.fileNumber = dbr.getDbKey(totalSize - 1 - id);
             readerHeader.lookupEntryToBuffer(buffer, entry);

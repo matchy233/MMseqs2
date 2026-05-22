@@ -6,13 +6,13 @@
 
 struct FileKmer {
     size_t kmer;
-    unsigned int id;
+    DBKeyType id;
     unsigned int file;
     unsigned short seqLen;
     short pos;
     bool reverse;
     FileKmer(){}
-    FileKmer(size_t kmer, unsigned int id, short pos, short seqLen, bool reverse, unsigned int file):
+    FileKmer(size_t kmer, DBKeyType id, short pos, short seqLen, bool reverse, unsigned int file):
             kmer(kmer), id(id), file(file), seqLen(seqLen),  pos(pos), reverse(reverse) {}
 
 };

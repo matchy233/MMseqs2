@@ -51,7 +51,7 @@ int profile2pssm(int argc, const char **argv, const Command &command) {
 
             if (isDbOutput == false) {
                 result.append("Query profile of sequence ");
-                Itoa::u32toa_sse2(key, buffer);
+                Itoa::u64toa_sse2(static_cast<uint64_t>(key), buffer);
                 result.append(buffer);
                 result.push_back('\n');
             }

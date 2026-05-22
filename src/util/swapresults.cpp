@@ -42,7 +42,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
     BaseMatrix *subMat = NULL;
     EvalueComputation *evaluer = NULL;
     size_t aaResSize = 0;
-    unsigned int maxTargetId = 0;
+    DBKeyType maxTargetId = 0;
     char *targetElementExists = NULL;
     if (isGeneralMode) {
         DBReader<DBKeyType> resultReader(parResultDb, parResultDbIndex, par.threads, DBReader<DBKeyType>::USE_INDEX|DBReader<DBKeyType>::USE_DATA);
@@ -63,7 +63,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
                 char *data = resultReader.getData(i, thread_idx);
                 while (*data != '\0') {
                     Util::parseKey(data, key);
-                    unsigned int dbKey = std::strtoul(key, NULL, 10);
+                    DBKeyType dbKey = Util::fast_atoi<DBKeyType>(key);
                     maxTargetId = std::max(maxTargetId, dbKey);
                     data = Util::skipLine(data);
                 }
@@ -120,7 +120,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
                 progress.updateProgress();
                 const DBKeyType resultId = resultDbr.getDbKey(i);
                 char queryKeyStr[1024];
-                char *tmpBuff = Itoa::u32toa_sse2((uint32_t) resultId, queryKeyStr);
+                char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(resultId), queryKeyStr);
                 *(tmpBuff) = '\0';
                 size_t queryKeyLen = strlen(queryKeyStr);
                 char *data = resultDbr.getData(i, thread_idx);
@@ -128,7 +128,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
                 while (*data != '\0') {
                     Util::parseKey(data, dbKeyBuffer);
                     size_t targetKeyLen = strlen(dbKeyBuffer);
-                    const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
+                    const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(dbKeyBuffer);
                     char *nextLine = Util::skipLine(data);
                     size_t lineLen = nextLine - data;
                     lineLen -= targetKeyLen;
@@ -147,7 +147,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
     memoryLimit = (memoryLimit > bytesForTargetElements) ? (memoryLimit - bytesForTargetElements) : 0;
 
     // compute splits
-    std::vector<std::pair<unsigned int, size_t > > splits;
+    std::vector<std::pair<DBKeyType, size_t > > splits;
     std::vector<std::pair<std::string , std::string > > splitFileNames;
     size_t bytesToWrite = 0;
     for (size_t i = 0; i <= maxTargetId; i++) {
@@ -162,10 +162,10 @@ int doswap(Parameters& par, bool isGeneralMode) {
 
     const char empty = '\0';
 
-    unsigned int prevDbKeyToWrite = 0;
+    DBKeyType prevDbKeyToWrite = 0;
     size_t prevBytesToWrite = 0;
     for (size_t split = 0; split < splits.size(); split++) {
-        unsigned int dbKeyToWrite = splits[split].first;
+        DBKeyType dbKeyToWrite = splits[split].first;
         size_t bytesToWrite = splits[split].second;
         char *tmpData = new(std::nothrow) char[bytesToWrite];
         Util::checkAllocation(tmpData, "Cannot allocate tmpData memory");
@@ -184,7 +184,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
                 char *data = resultDbr.getData(i, thread_idx);
                 DBKeyType queryKey = resultDbr.getDbKey(i);
                 char queryKeyStr[1024];
-                char *tmpBuff = Itoa::u32toa_sse2((uint32_t) queryKey, queryKeyStr);
+                char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(queryKey), queryKeyStr);
                 *(tmpBuff) = '\0';
                 size_t queryKeyLen = strlen(queryKeyStr);
                 char dbKeyBuffer[255 + 1];
@@ -196,7 +196,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
                     size_t newLineLen = oldLineLen;
                     newLineLen -= targetKeyLen;
                     newLineLen += queryKeyLen;
-                    const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
+                    const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(dbKeyBuffer);
                     // update offset but do not copy memory
                     size_t offset = __sync_fetch_and_add(&(targetElementSize[dbKey]), newLineLen) - prevBytesToWrite;
                     if(dbKey >= prevDbKeyToWrite && dbKey <=  dbKeyToWrite){
@@ -208,7 +208,7 @@ int doswap(Parameters& par, bool isGeneralMode) {
             }
         }
         //revert offsets
-        for (unsigned int i = maxTargetId + 1; i > 0; i--) {
+        for (size_t i = static_cast<size_t>(maxTargetId) + 1; i > 0; i--) {
             targetElementSize[i] = targetElementSize[i - 1];
         }
         targetElementSize[0] = 0;

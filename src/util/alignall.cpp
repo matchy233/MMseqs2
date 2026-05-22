@@ -74,7 +74,7 @@ int alignall(int argc, const char **argv, const Command &command) {
 
             char buffer[1024 + 32768*4];
 
-            std::vector<unsigned int> results;
+            std::vector<DBKeyType> results;
             results.reserve(300);
 
 #pragma omp for schedule(dynamic, 1)
@@ -87,25 +87,33 @@ int alignall(int argc, const char **argv, const Command &command) {
                 results.clear();
                 while (*data != '\0') {
                     Util::parseKey(data, buffer);
-                    const unsigned int key = (unsigned int) strtoul(buffer, NULL, 10);
+                    const DBKeyType key = Util::fast_atoi<DBKeyType>(buffer);
                     results.push_back(key);
                     data = Util::skipLine(data);
                 }
 
                 resultWriter.writeStart(thread_idx);
                 for (size_t entryIdx1 = 0; entryIdx1 < results.size(); entryIdx1++) {
-                    const unsigned int queryId = tdbr.getId(results[entryIdx1]);
+                    const size_t queryId = tdbr.getId(results[entryIdx1]);
+                    if (queryId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid query key " << results[entryIdx1] << " in result entry " << key << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     const DBKeyType queryKey = tdbr.getDbKey(queryId);
                     char *querySeq = tdbr.getData(queryId, thread_idx);
                     query.mapSequence(queryId, queryKey, querySeq, tdbr.getSeqLen(queryId));
                     matcher.initQuery(&query);
 
-                    char * tmpBuff = Itoa::u32toa_sse2((uint32_t) queryKey, buffer);
+                    char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(queryKey), buffer);
                     *(tmpBuff-1) = '\t';
-                    const unsigned int queryIdLen = tmpBuff - buffer;
+                    const size_t queryIdLen = tmpBuff - buffer;
 
                     for (size_t entryIdx = 0; entryIdx < results.size(); entryIdx++) {
-                        const unsigned int targetId = tdbr.getId(results[entryIdx]);
+                        const size_t targetId = tdbr.getId(results[entryIdx]);
+                        if (targetId == DB_ENTRY_NOT_FOUND) {
+                            Debug(Debug::ERROR) << "Invalid target key " << results[entryIdx] << " in result entry " << key << ".\n";
+                            EXIT(EXIT_FAILURE);
+                        }
                         const DBKeyType targetKey = tdbr.getDbKey(targetId);
                         char *targetSeq = tdbr.getData(targetId, thread_idx);
                         target.mapSequence(id, targetKey, targetSeq, tdbr.getSeqLen(targetId));
@@ -136,5 +144,4 @@ int alignall(int argc, const char **argv, const Command &command) {
 
     return EXIT_SUCCESS;
 }
-
 

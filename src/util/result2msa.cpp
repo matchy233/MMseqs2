@@ -184,7 +184,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
         std::vector<std::vector<unsigned char>> seqSet;
         seqSet.reserve(300);
 
-        std::vector<unsigned int> seqKeys;
+        std::vector<DBKeyType> seqKeys;
         seqKeys.reserve(300);
 
         std::string result;
@@ -196,7 +196,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
             progress.updateProgress();
             DBKeyType queryKey = resultReader.getDbKey(id);
             size_t queryId = qDbr->getId(queryKey);
-            if (queryId == UINT_MAX) {
+            if (queryId == DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::WARNING) << "Invalid query sequence " << queryKey << "\n";
                 continue;
             }
@@ -210,7 +210,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
 //            }
 
             size_t centerHeaderId = queryHeaderReader->getId(queryKey);
-            if (centerHeaderId == UINT_MAX) {
+            if (centerHeaderId == DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::WARNING) << "Invalid query header " << queryKey << "\n";
                 continue;
             }
@@ -227,7 +227,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
             while (*data != '\0') {
                 Util::parseKey(data, dbKey);
 
-                const unsigned int key = (unsigned int) strtoul(dbKey, NULL, 10);
+                const DBKeyType key = Util::fast_atoi<DBKeyType>(dbKey);
                 // in the same database case, we have the query repeated
                 if (key == queryKey && sameDatabase == true) {
                     data = Util::skipLine(data);
@@ -235,7 +235,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                 }
 
                 const size_t edgeId = tDbr->getId(key);
-                if (edgeId == UINT_MAX) {
+                if (edgeId == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::ERROR) << "Sequence " << key << " does not exist in target sequence database\n";
                     EXIT(EXIT_FAILURE);
                 }
@@ -271,7 +271,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         if (i == 0) {
                             headers.emplace_back(centerSequenceHeader, centerHeaderLength);
                         } else if (kept[i] == true) {
-                            unsigned int key = seqKeys[i - 1];
+                            DBKeyType key = seqKeys[i - 1];
                             size_t id = targetHeaderReader->getId(key);
                             char *header = targetHeaderReader->getData(id, thread_idx);
                             size_t length = targetHeaderReader->getEntryLen(id) - 1;
@@ -303,7 +303,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         header = centerSequenceHeader;
                         length = centerHeaderLength;
                     } else {
-                        unsigned int key = seqKeys[i - 1];
+                        DBKeyType key = seqKeys[i - 1];
                         size_t id = targetHeaderReader->getId(key);
                         header = targetHeaderReader->getData(id, thread_idx);
                         length = targetHeaderReader->getEntryLen(id) - 1;
@@ -370,7 +370,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                         if(isOnlyGap) {
                             header = "DUMMY";
                         }else {
-                            unsigned int key = seqKeys[i - 1];
+                            DBKeyType key = seqKeys[i - 1];
                             size_t id = targetHeaderReader->getId(key);
                             header = targetHeaderReader->getData(id, thread_idx);
                         }
@@ -417,7 +417,7 @@ int result2msa(int argc, const char **argv, const Command &command) {
                             result.append(Util::parseFastaHeader(centerSequenceHeader));
                         }
                     } else {
-                        unsigned int key = seqKeys[i - 1];
+                        DBKeyType key = seqKeys[i - 1];
                         size_t id = targetHeaderReader->getId(key);
                         if(isOnlyGap){
                             result.append("DUMMY");
@@ -505,15 +505,24 @@ int result2msa(int argc, const char **argv, const Command &command) {
                     result.append("\n;");
                 }
                 Matcher::result_t queryAln;
-                unsigned int newQueryKey = seqConcat->dbAKeyMap(queryKey);
+                DBKeyType newQueryKey = seqConcat->dbAKeyMap(queryKey);
                 queryAln.qStartPos = 0;
                 queryAln.dbStartPos = 0;
                 queryAln.backtrace = std::string(centerSequence.L, 'M'); // only matches
-                CompressedA3M::hitToBuffer(refReader->getId(newQueryKey), queryAln, result);
+                size_t newQueryId = refReader->getId(newQueryKey);
+                if (newQueryId == DB_ENTRY_NOT_FOUND) {
+                    Debug(Debug::ERROR) << "Compressed A3M target key " << newQueryKey << " cannot be found.\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                CompressedA3M::hitToBuffer(newQueryId, queryAln, result);
                 for (size_t i = 0; i < alnResults.size(); ++i) {
-                    unsigned int key = alnResults[i].dbKey;
-                    unsigned int targetKey = seqConcat->dbBKeyMap(key);
-                    unsigned int targetId = refReader->getId(targetKey);
+                    DBKeyType key = alnResults[i].dbKey;
+                    DBKeyType targetKey = seqConcat->dbBKeyMap(key);
+                    size_t targetId = refReader->getId(targetKey);
+                    if (targetId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Compressed A3M target key " << targetKey << " cannot be found.\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     CompressedA3M::hitToBuffer(targetId, alnResults[i], result);
                 }
             }
@@ -575,4 +584,3 @@ int result2msa(int argc, const char **argv, const Command &command) {
 #endif
     return EXIT_SUCCESS;
 }
-

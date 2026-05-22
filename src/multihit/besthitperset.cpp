@@ -24,9 +24,9 @@ public :
     }
 
 
-    void prepareInput(unsigned int, unsigned int) {}
+    void prepareInput(DBKeyType, unsigned int) {}
 
-    std::string aggregateEntry(std::vector<std::vector<std::string>> &dataToAggregate, unsigned int, unsigned int targetSetKey, unsigned int thread_idx)  {
+    std::string aggregateEntry(std::vector<std::vector<std::string>> &dataToAggregate, DBKeyType, DBKeyType targetSetKey, unsigned int thread_idx)  {
         double bestScore = -DBL_MAX;
         double secondBestScore = -DBL_MAX;
         double bestEval = DBL_MAX;
@@ -37,7 +37,7 @@ public :
         // Look for the lowest p-value and retain only this line
         // dataToAggregate = [nbrTargetGene][Field of result]
         size_t targetId = targetSizeReader->getId(targetSetKey);
-        if (targetId == UINT_MAX) {
+        if (targetId == DB_ENTRY_NOT_FOUND) {
             Debug(Debug::ERROR) << "Invalid target size database key " << targetSetKey << ".\n";
             EXIT(EXIT_FAILURE);
         }

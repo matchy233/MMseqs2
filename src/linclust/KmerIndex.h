@@ -3,6 +3,7 @@
 
 // Written by Martin Steinegger martin.steinegger@snu.ac.kr
 // storage for k-mers
+#include "IndexTypes.h"
 #include "MathUtil.h"
 #include <string>
 #include <algorithm>
@@ -29,7 +30,7 @@ private:
     int kmerSize;
 
     struct __attribute__((__packed__)) KmerEntryRelative {
-        unsigned int id;
+        DBKeyType id;
         unsigned short kmerOffset;
         unsigned short pos;
         unsigned short seqLen;
@@ -39,10 +40,10 @@ private:
 public:
     struct KmerEntry {
         size_t kmer;
-        unsigned int id;
+        DBKeyType id;
         unsigned short pos;
         unsigned short seqLen;
-        KmerEntry(size_t kmer, unsigned int id, unsigned short pos, unsigned short seqLen) :
+        KmerEntry(size_t kmer, DBKeyType id, unsigned short pos, unsigned short seqLen) :
                 kmer(kmer), id(id), pos(pos), seqLen(seqLen) {}
 
         KmerEntry() {}
@@ -137,7 +138,7 @@ public:
         writingPosition = 0;
     }
 
-    void addElementSorted(const size_t kmer, unsigned int id, unsigned short pos, unsigned short seqLen, bool isReverse){
+    void addElementSorted(const size_t kmer, DBKeyType id, unsigned short pos, unsigned short seqLen, bool isReverse){
         const size_t gridPosition = getGridPosition(kmer);
         size_t kmerStartRange = getKmerStartRange(kmer);
         prevKmerStartRange = kmerStartRange;
@@ -166,7 +167,7 @@ public:
     }
 
     size_t getOffsetsSize() {
-        return indexGridSize;
+        return indexGridSize + 1;
     }
 
     uint64_t getTableEntriesNum() {

@@ -44,7 +44,7 @@
    )
 
 struct __attribute__((__packed__)) CounterResult {
-    unsigned int id;
+    DBLocalId id;
     unsigned short diagonal;
     unsigned char count;
 
@@ -98,7 +98,7 @@ private:
     CounterResult *binDataFrame;
 
     struct __attribute__((__packed__)) TmpResult {
-        unsigned int id;
+        DBLocalId id;
         unsigned short diagonal;
     };
     // needed to temporary keep ids

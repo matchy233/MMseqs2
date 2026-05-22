@@ -69,7 +69,7 @@ int splitsequence(int argc, const char **argv, const Command& command) {
         }
         char buffer[1024];
 
-        for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i) {
+        for (size_t i = queryFrom; i < (queryFrom + querySize); ++i) {
             progress.updateProgress();
 
             DBKeyType key = reader.getDbKey(i);
@@ -81,13 +81,13 @@ int splitsequence(int argc, const char **argv, const Command& command) {
             char* header = headerReader.getData(i, thread_idx);
             size_t headerLen = headerReader.getEntryLen(i) - 1;
             Orf::SequenceLocation loc;
-            loc.id = UINT_MAX;
+            loc.id = DB_KEY_INVALID;
             loc.strand = Orf::STRAND_PLUS;
             size_t from = 0;
-            unsigned int dbKey = key;
+            DBKeyType dbKey = key;
             if (par.headerSplitMode == 0) {
                 loc = Orf::parseOrfHeader(header);
-                if (loc.id != UINT_MAX) {
+                if (loc.id != DB_KEY_INVALID) {
                     from = (loc.strand == Orf::STRAND_MINUS) ? loc.to : loc.from;
                     dbKey = loc.id;
                 }
@@ -111,7 +111,7 @@ int splitsequence(int argc, const char **argv, const Command& command) {
                 if (par.headerSplitMode == 0) {
                     size_t fromPos = from + startPos;
                     size_t toPos = (from + startPos) + (len - 1);
-                    if (loc.id != UINT_MAX && loc.strand == Orf::STRAND_MINUS) {
+                    if (loc.id != DB_KEY_INVALID && loc.strand == Orf::STRAND_MINUS) {
                         fromPos = (seqLen - 1) - (from + startPos);
                         toPos   = fromPos - std::min(fromPos, len);
                     }
@@ -151,4 +151,3 @@ int splitsequence(int argc, const char **argv, const Command& command) {
 
     return EXIT_SUCCESS;
 }
-

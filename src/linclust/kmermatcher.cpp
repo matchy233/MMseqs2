@@ -1615,7 +1615,7 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
     }
     DBKeyType repSeqId = entries[offsetPos].seqId;
     size_t pos = 0;
-    while(entries[offsetPos + pos].seqId != static_cast<DBKeyType>(SIZE_MAX)){
+    while(entries[offsetPos + pos].seqId != DB_KEY_INVALID){
         if(TYPE == Parameters::DBTYPE_NUCLEOTIDES){
             queue.push(FileKmerPosition(repSeqId, entries[offsetPos+pos].seqId, entries[offsetPos+pos].diagonal, entries[offsetPos+pos].score, entries[offsetPos+pos].getRev(), file));
         }else{
@@ -1623,7 +1623,7 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
         }
         pos++;
     }
-    queue.push(FileKmerPosition(repSeqId, static_cast<DBKeyType>(SIZE_MAX), 0, 0, file));
+    queue.push(FileKmerPosition(repSeqId, DB_KEY_INVALID, 0, 0, file));
     pos++;
     return offsetPos+pos;
 }
@@ -1693,7 +1693,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
         char buffer[1024];
         FileKmerPosition res;
         bool hasRepSeq = (repSequence.size() > 0);
-        DBKeyType currRepSeq = static_cast<DBKeyType>(SIZE_MAX);
+        DBKeyType currRepSeq = DB_KEY_INVALID;
 
         if (queue.empty() == false) {
             res = queue.top();
@@ -1712,7 +1712,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
             res = queue.top();
             queue.pop();
 
-            if (res.id == static_cast<DBKeyType>(SIZE_MAX)) {
+            if (res.id == DB_KEY_INVALID) {
                 offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
                                                               entries[res.file], entrySizes[res.file]);
                 
@@ -1723,7 +1723,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                 }
                 prefResultsOutString.clear();
 
-                while (queue.empty() == false && queue.top().id == static_cast<DBKeyType>(SIZE_MAX)) {
+                while (queue.empty() == false && queue.top().id == DB_KEY_INVALID) {
                     res = queue.top();
                     queue.pop();
                     offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
@@ -1780,9 +1780,9 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                         queue.push(res);
                     }
                 } else {
-                    hitId = static_cast<DBKeyType>(SIZE_MAX);
+                    hitId = DB_KEY_INVALID;
                 }
-            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != SIZE_MAX);
+            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != DB_KEY_INVALID);
 
             hit_t h;
             h.seqId     = prevHitId;
@@ -1857,7 +1857,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition<seqLenType, includeAdjac
 
             T writeBuffer[BUFFER_SIZE];
             T nullEntry;
-            nullEntry.seqId = static_cast<DBKeyType>(SIZE_MAX);
+            nullEntry.seqId = DB_KEY_INVALID;
             nullEntry.diagonal = 0;
 
             for (size_t kmerPos = startIdx; kmerPos < endIdx && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++) {

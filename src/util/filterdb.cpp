@@ -113,7 +113,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
 
     // JOIN_DB
     DBReader<DBKeyType>* helper = NULL;
-    std::unordered_map<unsigned int, float> weights;
+    std::unordered_map<DBKeyType, float> weights;
     // REGEX_FILTERING
     regex_t regex;
     std::random_device rng;
@@ -138,7 +138,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
             std::string line;
             while (std::getline(weightsFile, line)) {
                 std::istringstream iss(line);
-                unsigned int key;
+                DBKeyType key;
                 float weight;
                 if (!(iss >> key >> weight)) {
                     Debug(Debug::WARNING) << "Invalid line in weights file: " << line << "\n";
@@ -298,7 +298,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
             while (*data != '\0') {
                 if (shouldAddSelfMatch) {
                     Util::parseKey(data, dbKeyBuffer);
-                    const unsigned int curKey = (unsigned int) strtoul(dbKeyBuffer, NULL, 10);
+                    const DBKeyType curKey = Util::fast_atoi<DBKeyType>(dbKeyBuffer);
                     addSelfMatch = (queryKey == curKey);
                 }
 
@@ -373,8 +373,8 @@ int filterdb(int argc, const char **argv, const Command &command) {
                 } else if (mode == REGEX_FILTERING) {
                     nomatch = regexec(&regex, columnValue, 0, NULL, 0);
                 } else if (mode == JOIN_DB) {
-                    size_t newId = helper->getId(static_cast<unsigned int>(strtoul(columnValue, NULL, 10)));
-                    if (newId != UINT_MAX) {
+                    size_t newId = helper->getId(Util::fast_atoi<DBKeyType>(columnValue));
+                    if (newId != DB_ENTRY_NOT_FOUND) {
                         size_t originalLength = strlen(lineBuffer);
                         // Continue the string by replacing the null byte
                         lineBuffer[originalLength] = '\t';
@@ -485,7 +485,7 @@ int filterdb(int argc, const char **argv, const Command &command) {
                     }
                 } else if (mode == SORT_ENTRIES) {
                     if (par.sortEntries == PRIORITY) {
-                        unsigned int key = static_cast<unsigned int>(strtoul(columnPointer[column - 1], NULL, 10));
+                        DBKeyType key = Util::fast_atoi<DBKeyType>(columnPointer[column - 1]);
                         float weight = 0.0f;
                         auto it = weights.find(key);
                         if (it != weights.end()) {

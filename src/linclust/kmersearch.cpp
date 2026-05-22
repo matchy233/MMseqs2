@@ -61,7 +61,7 @@ KmerSearch::ExtractKmerAndSortResult KmerSearch::extractKmerAndSort(size_t total
 template <int TYPE>
 void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short, false, true> *kmers, size_t kmerCount) {
     size_t repSeqId = SIZE_T_MAX;
-    unsigned int prevHitId;
+    DBKeyType prevHitId;
     char buffer[100];
     std::string prefResultsOutString;
     prefResultsOutString.reserve(100000000);
@@ -74,7 +74,7 @@ void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short, false, true> *k
         }
         if (repSeqId != currId) {
             if(repSeqId != SIZE_T_MAX){
-                dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), static_cast<unsigned int>(repSeqId), 0);
+                dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), static_cast<DBKeyType>(repSeqId), 0);
             }
             repSeqId = currId;
             prefResultsOutString.clear();
@@ -87,9 +87,9 @@ void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short, false, true> *k
         int bestRevertMask = reverMask;
         short bestDiagonal = kmers[i].pos;
         int topScore = 0;
-        unsigned int tmpCurrId = currId;
+        size_t tmpCurrId = currId;
 
-        unsigned int hitId;
+        DBKeyType hitId;
         do {
             prevHitId = kmers[i].id;
             prevDiagonal = kmers[i].pos;
@@ -102,6 +102,9 @@ void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short, false, true> *k
             }
             topScore++;
             i++;
+            if (i >= kmerCount) {
+                break;
+            }
             hitId = kmers[i].id;
             tmpCurrId = kmers[i].kmer;
             if(TYPE == Parameters::DBTYPE_NUCLEOTIDES) {
@@ -123,7 +126,7 @@ void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short, false, true> *k
     // last element
     if(prefResultsOutString.size()>0){
         if(repSeqId != SIZE_T_MAX){
-            dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), static_cast<unsigned int>(repSeqId), 0);
+            dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), static_cast<DBKeyType>(repSeqId), 0);
         }
     }
 }

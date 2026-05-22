@@ -147,14 +147,18 @@ int doRescorediagonal(Parameters &par,
                 progress.updateProgress();
 
                 char *data = resultReader.getData(id, thread_idx);
-                size_t queryKey = resultReader.getDbKey(id);
+                DBKeyType queryKey = resultReader.getDbKey(id);
 
                 char *querySeq = NULL;
                 std::string queryToWrap; // needed only for wrapped end-start scoring
-                unsigned int queryId = UINT_MAX;
+                size_t queryId = DB_ENTRY_NOT_FOUND;
                 int queryLen = -1, origQueryLen = -1;
                 if(*data !=  '\0'){
                     queryId = qdbr->getId(queryKey);
+                    if (queryId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid query key " << queryKey << " in result database.\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     querySeq = qdbr->getData(queryId, thread_idx);
                     queryLen = static_cast<int>(qdbr->getSeqLen(queryId));
                     origQueryLen = queryLen;
@@ -201,7 +205,11 @@ int doRescorediagonal(Parameters &par,
                         }
                     }
 
-                    unsigned int targetId = tdbr->getId(results[entryIdx].seqId);
+                    size_t targetId = tdbr->getId(results[entryIdx].seqId);
+                    if (targetId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Invalid target key " << results[entryIdx].seqId << " in result entry " << queryKey << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     const bool isIdentity = (queryId == targetId && (par.includeIdentity || sameQTDB)) ? true : false;
                     char *targetSeq = tdbr->getData(targetId, thread_idx);
                     int dbLen = static_cast<int>(tdbr->getSeqLen(targetId));
@@ -432,5 +440,4 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
     resultReader.close();
     return status;
 }
-
 

@@ -417,7 +417,7 @@ public:
     static void extractProfileSequence(const char* data, size_t dataSize, const BaseMatrix &submat, std::string &result);
     static void extractProfileConsensus(const char* data, size_t dataSize, const BaseMatrix &submat, std::string &result);
 
-    int getId() const { return id; }
+    size_t getId() const { return id; }
 
     int getCurrentPosition() { return currItPos; }
 

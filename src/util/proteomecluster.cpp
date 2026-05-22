@@ -89,7 +89,7 @@ struct ProteomeEntry {
 
 struct MemberProtein{
     unsigned int proteomeKey;
-    unsigned int proteinId;
+    size_t proteinId;
     static bool compareByProteomeKeyOnly(const MemberProtein& a, const MemberProtein& b) {
         return a.proteomeKey < b.proteomeKey;
     }
@@ -163,7 +163,7 @@ inline char* writeProteomeToBuffer(const ProteomeEntry& proteome, char* buffer) 
 void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProteomeKey, DBReader<DBKeyType>& tProteinDB, Matcher& matcher, Sequence& query, Sequence& target, std::vector<ProteomeEntry>& MAYBE_UNUSED(proteomeList), Parameters& par, unsigned int thread_idx, int swMode, std::vector<unsigned int>& localsharedEntryCount, std::vector<size_t>& proteomekeyToIndex, DBWriter& proteinAlignWriter) {
     char buffer[1024]; 
     unsigned int qLen = 0;
-    unsigned int queryId = UINT_MAX;
+    size_t queryId = DB_ENTRY_NOT_FOUND;
     unsigned int qproteomeKey = UINT_MAX;
     bool includeAlign = par.includeAlignFiles || par.proteomeIncludeAlignFiles;
     // find representative query protein which has the longest sequence length
@@ -178,7 +178,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
         if (key != referenceProteomeKey) {
             break;
         }
-        const unsigned int proteinId = clusterRep.memberProteins[idx].proteinId;
+        const size_t proteinId = clusterRep.memberProteins[idx].proteinId;
         const unsigned int seqlen = tProteinDB.getSeqLen(proteinId);
         if (seqlen > qLen) { 
             // If gene duplication happens, find the longest sequence length protein
@@ -211,7 +211,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
             continue;
         }
        
-        const unsigned int targetId = eachTargetMember.proteinId; // lookupId
+        const size_t targetId = eachTargetMember.proteinId;
         const DBKeyType targetKey = tProteinDB.getDbKey(targetId);
         char* targetSeq = tProteinDB.getData(targetId, thread_idx);
 
@@ -380,10 +380,9 @@ int proteomecluster(int argc, const char **argv, const Command &command){
             ClusterEntry eachClusterRep;
             while (*clustData != '\0') {
                 Util::parseKey(clustData, buffer);
-                const unsigned int key = (unsigned int)strtoul(buffer, NULL, 10);
+                const DBKeyType key = Util::fast_atoi<DBKeyType>(buffer);
                 MemberProtein mem;
-                unsigned int lookupId = tProteinDB.getLookupIdByKey(key);
-                // mem.proteinId = tProteinDB.getId(lookupId); //before
+                size_t lookupId = tProteinDB.getLookupIdByKey(key);
                 mem.proteinId = tProteinDB.getId(key); //after
 
                 mem.proteomeKey = tProteinDB.getLookupFileNumber(lookupId);

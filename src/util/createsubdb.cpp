@@ -51,7 +51,7 @@ int createsubdb(int argc, const char **argv, const Command& command) {
             }
             key = reader.getLookupKey(lookupId);
         } else {
-            key = Util::fast_atoi<uint64_t>(dbKey);
+            key = Util::fast_atoi<DBKeyType>(dbKey);
         }
 
         isOrdered &= (prevKey <= key);

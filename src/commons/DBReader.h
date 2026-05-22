@@ -276,7 +276,7 @@ public:
     size_t bsearch(const Index * index, size_t size, T value);
 
     // does a binary search in the index and returns index of the entry with dbKey
-    // returns UINT_MAX if the key is not contained in index
+    // returns DB_ENTRY_NOT_FOUND if the key is not contained in index
     size_t getId (T dbKey);
 
     // does a binary search in the lookup and returns index of the entry

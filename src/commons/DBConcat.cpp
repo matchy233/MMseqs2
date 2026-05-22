@@ -49,8 +49,8 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
     indexSizeB = dbB.getSize();
 
     // keys paris are like : (key,i) where key is the ith key in the database
-    keysA = new std::pair<unsigned int, unsigned int>[indexSizeA];
-    keysB = new std::pair<unsigned int, unsigned int>[indexSizeB];
+    keysA = new std::pair<DBKeyType, DBKeyType>[indexSizeA];
+    keysB = new std::pair<DBKeyType, DBKeyType>[indexSizeB];
 
     DBWriter* concatWriter = NULL;
     if (write == true) {
@@ -61,7 +61,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
     Debug::Progress progress(indexSizeA);
     // where the new key numbering of B should start
     const bool writeNull = trimRight > 0;
-    unsigned int maxKeyA = 0;
+    DBKeyType maxKeyA = 0;
 #pragma omp parallel num_threads(threads)
     {
         unsigned int thread_idx = 0;
@@ -72,11 +72,11 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         for (size_t id = 0; id < indexSizeA; id++) {
             progress.updateProgress();
 
-            unsigned int newKey;
+            DBKeyType newKey;
             if (preserveKeysA) {
                 newKey = dbA.getDbKey(id);
             } else {
-                newKey = static_cast<unsigned int>(id);
+                newKey = static_cast<DBKeyType>(id);
             }
 
             if (write) {
@@ -84,7 +84,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
                 size_t dataSizeA = std::max(dbA.getEntryLen(id), trimRight) - trimRight;
                 if (takeLargerEntry == true) {
                     size_t idB = dbB.getId(newKey);
-                    size_t dataSizeB = std::max(dbB.getEntryLen(idB), trimRight) - trimRight;
+                    size_t dataSizeB = (idB == DB_ENTRY_NOT_FOUND) ? 0 : std::max(dbB.getEntryLen(idB), trimRight) - trimRight;
                     if (dataSizeA >= dataSizeB) {
                         concatWriter->writeData(data, dataSizeA, newKey, thread_idx, writeNull);
                     }
@@ -111,11 +111,11 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         for (size_t id = 0; id < indexSizeB; id++) {
             progress.updateProgress();
 
-            unsigned int newKey;
+            DBKeyType newKey;
             if (preserveKeysB) {
                 newKey = dbB.getDbKey(id);
             } else {
-                newKey = static_cast<unsigned int>(id) + maxKeyA;
+                newKey = static_cast<DBKeyType>(id) + maxKeyA;
             }
 
             if (write) {
@@ -123,7 +123,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
                 size_t dataSizeB = std::max(dbB.getEntryLen(id), trimRight) - trimRight;
                 if (takeLargerEntry) {
                     size_t idB = dbA.getId(newKey);
-                    size_t dataSizeA = std::max(dbA.getEntryLen(idB), trimRight) - trimRight;
+                    size_t dataSizeA = (idB == DB_ENTRY_NOT_FOUND) ? 0 : std::max(dbA.getEntryLen(idB), trimRight) - trimRight;
                     if (dataSizeB > dataSizeA) {
                         concatWriter->writeData(data, dataSizeB, newKey, thread_idx, writeNull);
                     }
@@ -133,7 +133,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
             }
 
             // need to store the index, because it'll be sorted out by keys later
-            keysB[id] = std::make_pair(dbB.getDbKey(id), id + maxKeyA);
+            keysB[id] = std::make_pair(dbB.getDbKey(id), newKey);
         }
     }
 
@@ -151,22 +151,22 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
     // handle mapping
     if (shouldConcatMapping) {
         char buffer[1024];
-        std::vector<std::pair<unsigned int, unsigned int>> mappingA;
-        Util::readMapping((dataFileNameA + "_mapping"), mappingA);
-        std::vector<std::pair<unsigned int, unsigned int>> mappingB;
-        Util::readMapping((dataFileNameB + "_mapping"), mappingB);
+        std::vector<std::pair<DBKeyType, DBKeyType>> mappingA;
+        Util::readMappingDBKey((dataFileNameA + "_mapping"), mappingA);
+        std::vector<std::pair<DBKeyType, DBKeyType>> mappingB;
+        Util::readMappingDBKey((dataFileNameB + "_mapping"), mappingB);
 
         FILE* mappingFilePtr = fopen((dataFileNameC + "_mapping").c_str(), "w");
 
         for(size_t i = 0; i < mappingA.size(); ++i) {
-            unsigned int prevKeyA = mappingA[i].first;
-            unsigned int taxidA = mappingA[i].second;
-            unsigned int newKeyA = dbAKeyMap(prevKeyA);
+            DBKeyType prevKeyA = mappingA[i].first;
+            DBKeyType taxidA = mappingA[i].second;
+            DBKeyType newKeyA = dbAKeyMap(prevKeyA);
 
             char * basePos = buffer;
-            char * tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(newKeyA), buffer);
+            char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newKeyA), buffer);
             *(tmpBuff-1) = '\t';
-            tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(taxidA), tmpBuff);;
+            tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(taxidA), tmpBuff);;
             *(tmpBuff-1) = '\n';
             size_t length = tmpBuff - basePos;
 
@@ -178,14 +178,14 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         }
 
         for(size_t i = 0; i < mappingB.size(); ++i) {
-            unsigned int prevKeyB = mappingB[i].first;
-            unsigned int taxidB = mappingB[i].second;
-            unsigned int newKeyB = dbBKeyMap(prevKeyB);
+            DBKeyType prevKeyB = mappingB[i].first;
+            DBKeyType taxidB = mappingB[i].second;
+            DBKeyType newKeyB = dbBKeyMap(prevKeyB);
 
             char * basePos = buffer;
-            char * tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(newKeyB), buffer);
+            char * tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newKeyB), buffer);
             *(tmpBuff-1) = '\t';
-            tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(taxidB), tmpBuff);;
+            tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(taxidB), tmpBuff);;
             *(tmpBuff-1) = '\n';
             size_t length = tmpBuff - basePos;
 
@@ -214,16 +214,16 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         std::string line;
 
         for (size_t i = 0; i < lookupReaderA.getLookupSize(); ++i) {
-            unsigned int prevKeyA = lookupA[i].id;
+            DBKeyType prevKeyA = lookupA[i].id;
             std::string accA = lookupA[i].entryName;
             unsigned int setIdA = lookupA[i].fileNumber;
             if (setIdA > maxSetIdA) {
                 maxSetIdA = setIdA;
             }
 
-            unsigned int newKeyA = dbAKeyMap(prevKeyA);
+            DBKeyType newKeyA = dbAKeyMap(prevKeyA);
 
-            char *tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(newKeyA), buffer);
+            char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newKeyA), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\t');
             line.append(accA);
@@ -246,14 +246,14 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         lookupReaderB.open(DBReader<DBKeyType>::NOSORT);
         DBReader<DBKeyType>::LookupEntry* lookupB = lookupReaderB.getLookup();
         for (size_t i = 0; i < lookupReaderB.getLookupSize(); ++i) {
-            unsigned int prevKeyB = lookupB[i].id;
+            DBKeyType prevKeyB = lookupB[i].id;
             std::string accB = lookupB[i].entryName;
             unsigned int setIdB = lookupB[i].fileNumber;
             
-            unsigned int newKeyB = dbBKeyMap(prevKeyB);
+            DBKeyType newKeyB = dbBKeyMap(prevKeyB);
             unsigned int newSetIdB = maxSetIdA + 1 + setIdB;
 
-            char *tmpBuff = Itoa::u32toa_sse2(static_cast<uint32_t>(newKeyB), buffer);
+            char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newKeyB), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\t');
             line.append(accB);
@@ -343,19 +343,19 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
     }
 }
 
-unsigned int DBConcat::dbAKeyMap(unsigned int key) {
+DBKeyType DBConcat::dbAKeyMap(DBKeyType key) {
     if (sameDatabase)
         return key;
 
-    std::pair<unsigned int, unsigned int> *originalMap = std::upper_bound(keysA, keysA + indexSizeA, key, compareKeyToFirstEntry());
+    std::pair<DBKeyType, DBKeyType> *originalMap = std::upper_bound(keysA, keysA + indexSizeA, key, compareKeyToFirstEntry());
     return originalMap->second;
 }
 
-unsigned int DBConcat::dbBKeyMap(unsigned int key) {
+DBKeyType DBConcat::dbBKeyMap(DBKeyType key) {
     if (sameDatabase)
         return key;
 
-    std::pair<unsigned int, unsigned int> *originalMap = std::upper_bound(keysB, keysB + indexSizeB, key, compareKeyToFirstEntry());
+    std::pair<DBKeyType, DBKeyType> *originalMap = std::upper_bound(keysB, keysB + indexSizeB, key, compareKeyToFirstEntry());
     return originalMap->second;
 }
 

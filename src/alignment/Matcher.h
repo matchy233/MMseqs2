@@ -88,7 +88,11 @@ public:
                                           dbOrfStartPos(-1), dbOrfEndPos(-1),
                                           backtrace(backtrace) {};
 
-        result_t(){};
+        result_t() : dbKey(DB_KEY_INVALID), score(0), qcov(0), dbcov(0), seqId(0), eval(0),
+                     alnLength(0), qStartPos(0), qEndPos(0), qLen(0),
+                     dbStartPos(0), dbEndPos(0), dbLen(0),
+                     queryOrfStartPos(-1), queryOrfEndPos(-1),
+                     dbOrfStartPos(-1), dbOrfEndPos(-1) {};
 
         static void swapResult(result_t & res, EvalueComputation &evaluer, bool hasBacktrace){
             double rawScore = evaluer.computeRawScoreFromBitScore(res.score);

@@ -110,7 +110,7 @@ int dolca(int argc, const char **argv, const Command& command, bool majority) {
                     continue;
                 }
 
-                unsigned int id = Util::fast_atoi<unsigned int>(entry[0]);
+                DBKeyType id = Util::fast_atoi<DBKeyType>(entry[0]);
                 TaxID taxon = mapping.lookup(id);
                 if (taxon == 0) {
                     // TODO: Check which taxa were not found

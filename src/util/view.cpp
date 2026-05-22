@@ -29,7 +29,7 @@ int view(int argc, const char **argv, const Command& command) {
     }
     IndexReader reader(par.db1, par.threads, indexSrcType, false, dbMode);
     for (size_t i = 0; i < ids.size(); ++i) {
-        unsigned int key;
+        DBKeyType key;
         std::string& ref = ids[i];
         if (lookupMode) {
             size_t lookupId = reader.sequenceReader->getLookupIdByAccession(ref);
@@ -39,11 +39,11 @@ int view(int argc, const char **argv, const Command& command) {
             }
             key = reader.sequenceReader->getLookupKey(lookupId);
         } else {
-            key = Util::fast_atoi<unsigned int>(ref.c_str());
+            key = Util::fast_atoi<DBKeyType>(ref.c_str());
         }
 
         const size_t id = reader.sequenceReader->getId(key);
-        if (id >= UINT_MAX) {
+        if (id == DB_ENTRY_NOT_FOUND) {
             Debug(Debug::ERROR) << "Key " << ids[i] << " not found in database\n";
             continue;
         }

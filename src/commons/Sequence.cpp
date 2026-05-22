@@ -411,7 +411,7 @@ void Sequence::mapSequence(const char * sequence, unsigned int dataLen){
 }
 
 void Sequence::printPSSM(){
-    printf("Query profile of sequence %d\n", dbKey);
+    printf("Query profile of sequence %llu\n", static_cast<unsigned long long>(dbKey));
     printf("Pos ");
     for(size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
         printf("%3c ", subMat->num2aa[aa]);
@@ -428,7 +428,7 @@ void Sequence::printPSSM(){
 }
 
 void Sequence::printProfile() const {
-    printf("Query profile of sequence %d\n", dbKey);
+    printf("Query profile of sequence %llu\n", static_cast<unsigned long long>(dbKey));
     printf("Pos ");
     for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
         printf("%6c ", subMat->num2aa[aa]);

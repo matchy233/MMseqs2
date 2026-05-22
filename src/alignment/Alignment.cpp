@@ -345,7 +345,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
                 unsigned int rejected = 0;
                 while (*data != '\0' && passedNum < maxAccept && rejected < maxReject) {
                     Util::parseKey(data, buffer);
-                    const unsigned int dbKey = (unsigned int) strtoul(buffer, NULL, 10);
+                    const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(buffer);
                     size_t elements = Util::getWordsOfLine(data, words, 10);
 
                     short diagonal = 0;
@@ -443,7 +443,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
 
                 if (lcaAlign == true && swRealignResults.size() > 0) {
                     Matcher::result_t& topHit = swRealignResults[0];
-                    const unsigned int topHitKey = topHit.dbKey;
+                    const DBKeyType topHitKey = topHit.dbKey;
                     size_t dbId = tdbr->getId(topHitKey);
                     char *qSeqData = tdbr->getData(dbId, thread_idx);
                     if (qSeqData == NULL) {
@@ -460,7 +460,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
                     unsigned int rejected = 0;
                     while (*data != '\0' && rejected < maxReject) {
                         Util::parseKey(data, buffer);
-                        const unsigned int dbKey = (unsigned int) strtoul(buffer, NULL, 10);
+                        const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(buffer);
 //                        size_t elements = Util::getWordsOfLine(data, words, 10);
 //                        short diagonal = 0;
 //                        bool isReverse = false;
@@ -566,7 +566,7 @@ bool Alignment::checkCriteria(Matcher::result_t &res, bool isIdentity, double ev
     }
 }
 
-void Alignment::computeAlternativeAlignment(unsigned int queryDbKey, Sequence &dbSeq, std::vector<Matcher::result_t> &swResults,
+void Alignment::computeAlternativeAlignment(DBKeyType queryDbKey, Sequence &dbSeq, std::vector<Matcher::result_t> &swResults,
                                             Matcher &matcher, float covThr, float evalThr, int swMode, int thread_idx) {
     const unsigned char xIndex = m->aa2num[static_cast<int>('X')];
     const size_t firstItResSize = swResults.size();

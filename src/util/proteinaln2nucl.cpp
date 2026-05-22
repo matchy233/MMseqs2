@@ -87,7 +87,11 @@ int proteinaln2nucl(int argc, const char **argv, const Command &command) {
             DBKeyType alnKey = alnDbr.getDbKey(i);
             char *data = alnDbr.getData(i, thread_idx);
 
-            unsigned int queryId = qdbr_nuc.getId(alnKey);
+            size_t queryId = qdbr_nuc.getId(alnKey);
+            if (queryId == DB_ENTRY_NOT_FOUND) {
+                Debug(Debug::ERROR) << "Invalid nucleotide query key " << alnKey << ".\n";
+                EXIT(EXIT_FAILURE);
+            }
             char *nuclQuerySeq = qdbr_nuc.getData(queryId, thread_idx);
             unsigned int nuclQuerySeqLen = qdbr_nuc.getSeqLen(queryId);
 
@@ -112,7 +116,11 @@ int proteinaln2nucl(int argc, const char **argv, const Command &command) {
                     EXIT(EXIT_FAILURE);
                 }
 
-                unsigned int targetId = tdbr_nuc->getId(res.dbKey);
+                size_t targetId = tdbr_nuc->getId(res.dbKey);
+                if (targetId == DB_ENTRY_NOT_FOUND) {
+                    Debug(Debug::ERROR) << "Invalid nucleotide target key " << res.dbKey << ".\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 char *nuclTargetSeq = tdbr_nuc->getData(targetId, thread_idx);
                 char *aaTargetSeq = tdbr_aa->getDataByDBKey(res.dbKey, thread_idx);
                 unsigned int nuclTargetSeqLen = tdbr_nuc->getSeqLen(targetId);
@@ -203,4 +211,3 @@ int proteinaln2nucl(int argc, const char **argv, const Command &command) {
 
     return EXIT_SUCCESS;
 }
-

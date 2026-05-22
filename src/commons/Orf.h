@@ -53,7 +53,7 @@ public:
     };
 
     struct SequenceLocation {
-        unsigned int id;
+        DBKeyType id;
         size_t from, to;
         bool hasIncompleteStart, hasIncompleteEnd;
         Strand strand;
@@ -101,7 +101,7 @@ public:
         return iupacReverseComplementTable[static_cast<unsigned char>(c)];
     }
 
-    static size_t writeOrfHeader(char *buffer, unsigned int key, size_t fromPos, size_t toPos, bool hasIncompleteStart,
+    static size_t writeOrfHeader(char *buffer, DBKeyType key, size_t fromPos, size_t toPos, bool hasIncompleteStart,
                                bool hasIncompleteEnd);
 
 private:

@@ -86,10 +86,10 @@ public:
     }
 
 
-    void prepareInput(unsigned int, unsigned int) {}
+    void prepareInput(DBKeyType, unsigned int) {}
 
-    std::string aggregateEntry(std::vector<std::vector<std::string> > &dataToAggregate, unsigned int querySetKey,
-                               unsigned int targetSetKey, unsigned int thread_idx) {
+    std::string aggregateEntry(std::vector<std::vector<std::string> > &dataToAggregate, DBKeyType querySetKey,
+                               DBKeyType targetSetKey, unsigned int thread_idx) {
         double targetGeneCount = std::strtod(targetSizeReader->getDataByDBKey(targetSetKey, thread_idx), NULL);
         double pvalThreshold = this->alpha / targetGeneCount;
         std::vector<std::pair<long, long>> genesPositions;

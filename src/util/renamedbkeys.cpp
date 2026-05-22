@@ -8,13 +8,13 @@
 
 #include <climits>
 
-static bool compareToFirst(const std::pair<unsigned int, unsigned int>& lhs, const std::pair<unsigned int, unsigned int>& rhs){
+static bool compareToFirst(const std::pair<DBKeyType, DBKeyType>& lhs, const std::pair<DBKeyType, DBKeyType>& rhs){
     return (lhs.first <= rhs.first);
 }
 
-void copyEntry(unsigned int oldKey, unsigned int newKey, DBReader<DBKeyType>& reader, DBWriter& writer, bool isCompressed, int subDbMode) {
+void copyEntry(DBKeyType oldKey, DBKeyType newKey, DBReader<DBKeyType>& reader, DBWriter& writer, bool isCompressed, int subDbMode) {
     const size_t id = reader.getId(oldKey);
-    if (id >= UINT_MAX) {
+    if (id == DB_ENTRY_NOT_FOUND) {
         Debug(Debug::ERROR) << "Key " << oldKey << " not found in database\n";
         EXIT(EXIT_FAILURE);
     }
@@ -60,12 +60,12 @@ int renamedbkeys(int argc, const char **argv, const Command &command) {
     const bool isCompressed = reader.isCompressed();
 
     FILE* newMappingFile = NULL;
-    std::vector<std::pair<unsigned int, unsigned int>> mapping;
-    std::vector<std::pair<unsigned int, unsigned int>> newMapping;
+    std::vector<std::pair<DBKeyType, DBKeyType>> mapping;
+    std::vector<std::pair<DBKeyType, DBKeyType>> newMapping;
     if (FileUtil::fileExists((par.db2 + "_mapping").c_str())) {
         mapping.reserve(reader.getSize());
         newMapping.reserve(reader.getSize());
-        bool isSorted = Util::readMapping(par.db2 + "_mapping", mapping);
+        bool isSorted = Util::readMappingDBKey(par.db2 + "_mapping", mapping);
         if (isSorted == false) {
             std::stable_sort(mapping.begin(), mapping.end(), compareToFirst);
         }
@@ -106,21 +106,21 @@ int renamedbkeys(int argc, const char **argv, const Command &command) {
             Debug(Debug::WARNING) << "Not enough columns in mapping file\n";
             continue;
         }
-        const unsigned int oldKey = Util::fast_atoi<unsigned int>(fields[0]);
-        const unsigned int newKey = Util::fast_atoi<unsigned int>(fields[1]);
+        const DBKeyType oldKey = Util::fast_atoi<DBKeyType>(fields[0]);
+        const DBKeyType newKey = Util::fast_atoi<DBKeyType>(fields[1]);
 
         copyEntry(oldKey, newKey, reader, writer, isCompressed, par.subDbMode);
         if (lookup != NULL) {
-            unsigned int lookupId = reader.getLookupIdByKey(oldKey);
+            size_t lookupId = reader.getLookupIdByKey(oldKey);
             DBReader<DBKeyType>::LookupEntry entry = lookup[lookupId];
             entry.id = newKey;
             newLookup.emplace_back(entry);
         }
 
         if (mapping.size() > 0) {
-            std::pair<unsigned int, unsigned int> val;
+            std::pair<DBKeyType, DBKeyType> val;
             val.first = oldKey;
-            std::vector<std::pair<unsigned int, unsigned int>>::iterator mappingIt;
+            std::vector<std::pair<DBKeyType, DBKeyType>>::iterator mappingIt;
             mappingIt = std::upper_bound(mapping.begin(), mapping.end(), val, compareToFirst);
             if (mappingIt != mapping.end() && mappingIt->first == val.first) {
                 val.first = newKey;

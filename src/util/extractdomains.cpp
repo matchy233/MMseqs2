@@ -252,7 +252,7 @@ int doExtract(Parameters &par, DBReader<DBKeyType> &blastTabReader,
 
             DBKeyType id = blastTabReader.getDbKey(i);
             size_t entry = msaReader.getId(id);
-            if (entry == UINT_MAX) {
+            if (entry == DB_ENTRY_NOT_FOUND) {
                 Debug(Debug::WARNING) << "Can not find MSA for key " << id << "!\n";
                 continue;
             }

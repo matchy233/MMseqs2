@@ -150,7 +150,7 @@ static void initAlign2clustThreadProgress(size_t threadCount) {
     align2clustThreadPrefHitCount = new std::atomic<size_t>[threadCount];
     for (size_t i = 0; i < threadCount; i++) {
         align2clustThreadLoopIndex[i].store(SIZE_MAX, std::memory_order_relaxed);
-        align2clustThreadQueryKey[i].store(static_cast<DBKeyType>(SIZE_MAX), std::memory_order_relaxed);
+        align2clustThreadQueryKey[i].store(DB_KEY_INVALID, std::memory_order_relaxed);
         align2clustThreadPrefEntryBytes[i].store(0, std::memory_order_relaxed);
         align2clustThreadPrefHitCount[i].store(0, std::memory_order_relaxed);
     }
@@ -184,7 +184,7 @@ struct Align2clustLoopProgress {
         updateAlign2clustMaxLoopIndex(loopIndex);
         if (threadIdx < align2clustThreadProgressCount) {
             align2clustThreadLoopIndex[threadIdx].store(loopIndex, std::memory_order_relaxed);
-            align2clustThreadQueryKey[threadIdx].store(static_cast<DBKeyType>(SIZE_MAX), std::memory_order_relaxed);
+            align2clustThreadQueryKey[threadIdx].store(DB_KEY_INVALID, std::memory_order_relaxed);
             align2clustThreadPrefEntryBytes[threadIdx].store(0, std::memory_order_relaxed);
             align2clustThreadPrefHitCount[threadIdx].store(0, std::memory_order_relaxed);
         }
@@ -194,7 +194,7 @@ struct Align2clustLoopProgress {
         align2clustCompletedEntries.fetch_add(1, std::memory_order_relaxed);
         if (threadIdx < align2clustThreadProgressCount) {
             align2clustThreadLoopIndex[threadIdx].store(SIZE_MAX, std::memory_order_relaxed);
-            align2clustThreadQueryKey[threadIdx].store(static_cast<DBKeyType>(SIZE_MAX), std::memory_order_relaxed);
+            align2clustThreadQueryKey[threadIdx].store(DB_KEY_INVALID, std::memory_order_relaxed);
             align2clustThreadPrefEntryBytes[threadIdx].store(0, std::memory_order_relaxed);
             align2clustThreadPrefHitCount[threadIdx].store(0, std::memory_order_relaxed);
         }
@@ -264,7 +264,7 @@ static void logAlign2clustProgress(const char *label, size_t endRange) {
     size_t activeWorkers = 0;
     size_t oldestActiveLoopIndex = SIZE_MAX;
     size_t oldestActiveThread = SIZE_MAX;
-    DBKeyType oldestActiveQueryKey = static_cast<DBKeyType>(SIZE_MAX);
+    DBKeyType oldestActiveQueryKey = DB_KEY_INVALID;
     size_t oldestActivePrefEntryBytes = 0;
     size_t oldestActivePrefHitCount = 0;
 
@@ -353,13 +353,13 @@ static void writeData(DBWriter *dbWriter, const std::pair<DBKeyType, DBKeyType> 
     std::string resultString;
     resultString.reserve(1024 * 1024 * 1024);
     char buffer[32];
-    DBKeyType previousRepresentativeKey = static_cast<DBKeyType>(SIZE_MAX);
+    DBKeyType previousRepresentativeKey = DB_KEY_INVALID;
     
     for (size_t i = 0; i < dbSize; i++) {
         DBKeyType currentRepresentativeKey = results[i].first;
         
         if (previousRepresentativeKey != currentRepresentativeKey) {
-            if (previousRepresentativeKey != SIZE_MAX) {
+            if (previousRepresentativeKey != DB_KEY_INVALID) {
                 dbWriter->writeData(resultString.c_str(), resultString.length(), previousRepresentativeKey);
             }
             resultString.clear();
@@ -378,7 +378,7 @@ static void writeData(DBWriter *dbWriter, const std::pair<DBKeyType, DBKeyType> 
         previousRepresentativeKey = currentRepresentativeKey;
     }
     
-    if (previousRepresentativeKey != SIZE_MAX) {
+    if (previousRepresentativeKey != DB_KEY_INVALID) {
         dbWriter->writeData(resultString.c_str(), resultString.length(), previousRepresentativeKey);
     }
 }
@@ -696,7 +696,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
             while (*alignmentData != '\0') {
                 hit_t hit = QueryMatcher::parsePrefilterHit(alignmentData);
                 const size_t targetId = seqDbr->getId(hit.seqId);
-                if (assignedCluster[targetId] == SIZE_MAX) { 
+                if (assignedCluster[targetId] == SIZE_MAX) {
                         targetsWithDiagonal.push_back(std::make_pair(hit.seqId, hit.diagonal));
                 }
                 alignmentData = Util::skipLine(alignmentData);
@@ -775,7 +775,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                             while (*cluData != '\0') {
                                 Util::parseKey(cluData, buffer);
 
-                                const DBKeyType elementKey = Util::fast_atoi<uint64_t>(buffer);
+                                const DBKeyType elementKey = Util::fast_atoi<DBKeyType>(buffer);
                                 if (elementKey == targetKey) {
                                     cluData = Util::skipLine(cluData);
                                     continue;
@@ -885,7 +885,7 @@ int doAlign2clust(Parameters &par, DBWriter &resultWriter, DBReader<DBKeyType> &
                             if (numClu > 1) { // if not singleton
                                 while (*cluData != '\0') {
                                     Util::parseKey(cluData, buffer);
-                                    const DBKeyType elementKey = Util::fast_atoi<uint64_t>(buffer);
+                                    const DBKeyType elementKey = Util::fast_atoi<DBKeyType>(buffer);
                                     if (elementKey == targetKey) {
                                         cluData = Util::skipLine(cluData);
                                         continue;
@@ -1027,7 +1027,7 @@ int align2clust(int argc, const char **argv, const Command &command) {
     Timer timer;
     timer.reset();
     
-    DBReader<DBKeyType> alnDbr(par.db2.c_str(), par.db2Index.c_str(), par.threads, 
+    DBReader<DBKeyType> alnDbr(par.db2.c_str(), par.db2Index.c_str(), par.threads,
                                   DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
     alnDbr.open(DBReader<DBKeyType>::LINEAR_ACCCESS);
     int dbtype =  Parameters::DBTYPE_CLUSTER_RES;

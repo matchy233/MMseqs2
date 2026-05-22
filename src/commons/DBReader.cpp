@@ -679,11 +679,11 @@ void DBReader<T>::touchData(size_t id) {
 template <typename T> char* DBReader<T>::getDataByDBKey(T dbKey, int thrIdx) {
     size_t id = getId(dbKey);
     if(compression == COMPRESSED ){
-        return (id != UINT_MAX) ? getDataCompressed(id, thrIdx) : NULL;
+        return (id != DB_ENTRY_NOT_FOUND) ? getDataCompressed(id, thrIdx) : NULL;
     } if(padded) {
-        return (id != UINT_MAX) ? getUnpadded(id, thrIdx) : NULL;
+        return (id != DB_ENTRY_NOT_FOUND) ? getUnpadded(id, thrIdx) : NULL;
     } else{
-        return (id != UINT_MAX) ? getDataByOffset(index[id].offset) : NULL;
+        return (id != DB_ENTRY_NOT_FOUND) ? getDataByOffset(index[id].offset) : NULL;
     }
 }
 
@@ -838,9 +838,9 @@ template <typename T> void DBReader<T>::sortSourceByFileName(){
 template <typename T> size_t DBReader<T>::getId (T dbKey){
     size_t id = bsearch(index, size, dbKey);
     if (id2local != NULL) {
-        return (id < size && index[id].id == dbKey) ? id2local[id] : SIZE_MAX;
+        return (id < size && index[id].id == dbKey) ? id2local[id] : DB_ENTRY_NOT_FOUND;
     }
-    return (id < size && index[id].id == dbKey ) ? id : SIZE_MAX;
+    return (id < size && index[id].id == dbKey ) ? id : DB_ENTRY_NOT_FOUND;
 }
 
 template <typename T> size_t DBReader<T>::maxCount(char c) {

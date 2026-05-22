@@ -78,7 +78,7 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
                 std::fill(localMatchResults.begin(), localMatchResults.end(), 0);
                 while (*data != '\0') {
                     Util::parseKey(data, buffer);
-                    const unsigned int targetDbKey = (unsigned int) strtoul(buffer, NULL, 10);
+                    const DBKeyType targetDbKey = Util::fast_atoi<DBKeyType>(buffer);
                     // const unsigned int tId = tdbr.getId(targetDbKey);  
                     size_t tLookupId = tdbr.getLookupIdByKey(targetDbKey);
                     const unsigned int targetSourceId = tdbr.getLookupFileNumber(tLookupId);
@@ -126,5 +126,4 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
 
     return EXIT_SUCCESS;
 }
-
 

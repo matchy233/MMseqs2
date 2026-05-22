@@ -22,8 +22,8 @@ int touchdb(int argc, const char **argv, const Command& command) {
 
             std::vector<std::string> ids = Util::split(par.idList, ",");
             for (size_t i = 0; i < ids.size(); ++i) {
-                size_t id = reader.getId(Util::fast_atoi<unsigned int>(ids[i].c_str()));
-                if (id == UINT_MAX) {
+                size_t id = reader.getId(Util::fast_atoi<DBKeyType>(ids[i].c_str()));
+                if (id == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::WARNING) << "Key " << ids[i] << " not found in database\n";
                     continue;
                 }

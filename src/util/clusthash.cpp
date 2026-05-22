@@ -35,7 +35,7 @@ int clusthash(int argc, const char **argv, const Command &command) {
     DBWriter writer(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
     writer.open();
     Debug(Debug::INFO) << "Hashing sequences...\n";
-    std::pair<size_t, unsigned int> *hashSeqPair = new std::pair<size_t, unsigned int>[reader.getSize() + 1];
+    std::pair<size_t, size_t> *hashSeqPair = new std::pair<size_t, size_t>[reader.getSize() + 1];
     // needed later to check if one of array
     hashSeqPair[reader.getSize()] = std::make_pair(UINT_MAX, 0);
     Debug::Progress progress(reader.getSize());
@@ -87,7 +87,7 @@ int clusthash(int argc, const char **argv, const Command &command) {
         }
         prevHash = hashSeqPair[id].first;
     }
-    std::pair<size_t, unsigned int> **hashLookup = new std::pair<size_t, unsigned int>*[uniqHashes];
+    std::pair<size_t, size_t> **hashLookup = new std::pair<size_t, size_t>*[uniqHashes];
     hashLookup[0] = hashSeqPair;
     size_t currKey = 1;
     prevHash = hashSeqPair[0].first;
@@ -107,7 +107,7 @@ int clusthash(int argc, const char **argv, const Command &command) {
         thread_idx = omp_get_thread_num();
 #endif
 
-        std::vector<unsigned int> setIds;
+        std::vector<size_t> setIds;
         setIds.reserve(300);
         std::vector<bool> found;
         found.reserve(300);

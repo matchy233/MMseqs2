@@ -387,13 +387,19 @@ int StatsComputer::sequenceWise(typename PerSequence<T>::type call, bool onlyRes
                     Util::parseKey(results, dbKey);
                     char *rest;
                     errno = 0;
-                    const unsigned int key = (unsigned int) strtoul(dbKey, &rest, 10);
+                    const DBKeyType key = static_cast<DBKeyType>(strtoull(dbKey, &rest, 10));
                     if ((rest != dbKey && *rest != '\0') || errno == ERANGE) {
                         Debug(Debug::WARNING) << "Invalid key in entry " << id << "!\n";
+                        results = Util::skipLine(results);
                         continue;
                     }
 
                     const size_t edgeId = targetReader->getId(key);
+                    if (edgeId == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::WARNING) << "Missing target key " << key << " in entry " << id << "!\n";
+                        results = Util::skipLine(results);
+                        continue;
+                    }
                     const char *dbSeqData = targetReader->getData(edgeId, thread_idx);
 
                     T stat = (*call)(dbSeqData);

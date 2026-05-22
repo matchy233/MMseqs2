@@ -33,7 +33,7 @@ public:
         delete[] expression;
     }
 
-    void setDbFrom(unsigned int from) {
+    void setDbFrom(size_t from) {
         dbFrom = from;
     }
 
@@ -44,7 +44,7 @@ public:
 #endif
         size_t writePos = 0;
         for (size_t i = 0; i < resultSize; i++) {
-            unsigned int currId = matcher.foundDiagonals[i].id;
+            DBLocalId currId = matcher.foundDiagonals[i].id;
             DBKeyType key = targetReader->getDbKey(dbFrom + currId);
             TaxID currTax = taxonomyMapping->lookup(key);
             if (expression[thread_idx]->isAncestor(currTax)) {
@@ -79,7 +79,7 @@ public:
     DBReader<DBKeyType>* targetReader;
     TaxonomyExpression** expression;
 
-    unsigned int dbFrom;
+    size_t dbFrom;
     unsigned int threads;
 };
 

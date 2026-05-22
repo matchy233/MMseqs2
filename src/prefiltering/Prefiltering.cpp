@@ -836,18 +836,18 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
             char *seqData = qdbr->getData(id, thread_idx);
             DBKeyType qKey = qdbr->getDbKey(id);
             seq.mapSequence(id, qKey, seqData, qdbr->getSeqLen(id));
-            size_t targetSeqId = UINT_MAX;
+            DBLocalId targetSeqId = DB_LOCAL_ID_INVALID;
             if (sameQTDB || includeIdentical) {
-                targetSeqId = tdbr->getId(seq.getDbKey());
+                size_t foundTargetSeqId = tdbr->getId(seq.getDbKey());
                 // only the corresponding split should include the id (hack for the hack)
-                if (targetSeqId >= dbFrom && targetSeqId < (dbFrom + dbSize) && targetSeqId != UINT_MAX) {
-                    targetSeqId = targetSeqId - dbFrom;
+                if (foundTargetSeqId >= dbFrom && foundTargetSeqId < (dbFrom + dbSize) && foundTargetSeqId != DB_ENTRY_NOT_FOUND) {
+                    targetSeqId = static_cast<DBLocalId>(foundTargetSeqId - dbFrom);
                     if(targetSeqId > tdbr->getSize()){
                         Debug(Debug::ERROR) << "targetSeqId: " << targetSeqId << " > target database size: "  << tdbr->getSize() <<  "\n";
                         EXIT(EXIT_FAILURE);
                     }
                 }else{
-                    targetSeqId = UINT_MAX;
+                    targetSeqId = DB_LOCAL_ID_INVALID;
                 }
             }
             // calculate prefiltering results

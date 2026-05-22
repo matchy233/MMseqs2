@@ -65,9 +65,9 @@ int addtaxonomy(int argc, const char **argv, const Command &command) {
                     continue;
                 }
                 if (par.pickIdFrom == Parameters::EXTRACT_TARGET) {
-                    unsigned int id = Util::fast_atoi<unsigned int>(entry[0]);
+                    DBKeyType id = Util::fast_atoi<DBKeyType>(entry[0]);
                     if(isTaxresult){
-                        taxon = id;
+                        taxon = Util::fast_atoi<TaxID>(entry[0]);
                     }else{
                         taxon = mapping.lookup(id);
                     }
@@ -117,4 +117,3 @@ int addtaxonomy(int argc, const char **argv, const Command &command) {
     delete t;
     return EXIT_SUCCESS;
 }
-

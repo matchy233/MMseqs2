@@ -43,8 +43,12 @@ int result2repseq(int argc, const char **argv, const Command &command) {
             }
 
             Util::parseKey(results, dbKey);
-            const unsigned int key = (unsigned int) strtoul(dbKey, NULL, 10);
+            const DBKeyType key = Util::fast_atoi<DBKeyType>(dbKey);
             const size_t edgeId = seqReader.getId(key);
+            if (edgeId == DB_ENTRY_NOT_FOUND) {
+                Debug(Debug::ERROR) << "Sequence " << key << " does not exist in sequence database.\n";
+                EXIT(EXIT_FAILURE);
+            }
             resultWriter.writeData(seqReader.getData(edgeId, thread_idx), seqReader.getEntryLen(edgeId) - 1, resultReader.getDbKey(id), thread_idx);
         }
     }

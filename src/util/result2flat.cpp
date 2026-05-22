@@ -63,7 +63,7 @@ int result2flat(int argc, const char **argv, const Command &command) {
                 if(Parameters::isEqualDbtype(dbr_data.getDbtype(), DbValidator::resultDb[i])  ) {
                     keyLen = (words[1] - words[0]);
                     dbKeyBuffer.append(words[0], keyLen);
-                    const unsigned int dbKey = (unsigned int) strtoul(dbKeyBuffer.c_str(), NULL, 10);
+                    const DBKeyType dbKey = Util::fast_atoi<DBKeyType>(dbKeyBuffer.c_str());
                     target_header_data = targetdb_header.getDataByDBKey(dbKey, 0);
                 }
             }

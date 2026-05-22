@@ -229,7 +229,7 @@ int taxonomyreport(int argc, const char **argv, const Command &command) {
                     ++localTaxCounts[taxon];
                 } else {
                     // match dbKey to its taxon based on mapping
-                    unsigned int taxon = mapping->lookup(Util::fast_atoi<unsigned int>(data));
+                    TaxID taxon = mapping->lookup(Util::fast_atoi<DBKeyType>(data));
                     if (taxon != 0) {
                         ++localTaxCounts[taxon];
                     }
@@ -291,4 +291,3 @@ int taxonomyreport(int argc, const char **argv, const Command &command) {
     delete taxDB;
     return status;
 }
-

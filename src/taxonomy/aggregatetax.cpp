@@ -73,10 +73,10 @@ int aggregate(const bool useAln, int argc, const char **argv, const Command& com
             // process a specific set
             while (*results != '\0') {
                 Util::getWordsOfLine(results, entry, 255);
-                unsigned int seqKey = Util::fast_atoi<unsigned int>(entry[0]);
+                DBKeyType seqKey = Util::fast_atoi<DBKeyType>(entry[0]);
 
                 size_t seqId = taxSeqReader.getId(seqKey);
-                if (seqId == UINT_MAX) {
+                if (seqId == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::ERROR) << "Missing key " << seqKey << " in tax result\n";
                     EXIT(EXIT_FAILURE);
                 }
@@ -85,7 +85,7 @@ int aggregate(const bool useAln, int argc, const char **argv, const Command& com
 
                 if (useAln == true && taxon != 0) {
                     size_t alnId = alnSeqReader->getId(seqKey);
-                    if (alnId == UINT_MAX) {
+                    if (alnId == DB_ENTRY_NOT_FOUND) {
                         Debug(Debug::ERROR) << "Missing key " << alnId << " in alignment result\n";
                         EXIT(EXIT_FAILURE);
                     }

@@ -70,7 +70,7 @@ int maskbygff(int argc, const char **argv, const Command& command) {
         end -= 1;
 
         size_t id = reader.getId(name);
-        if(id == UINT_MAX) {
+        if(id == DB_ENTRY_NOT_FOUND) {
             Debug(Debug::ERROR) << "GFF entry not found in input database: " << name << "!\n";
             return EXIT_FAILURE;
         }
@@ -94,7 +94,7 @@ int maskbygff(int argc, const char **argv, const Command& command) {
     headerWriter.open();
 
     for(size_t i = 0; i < reader.getSize(); ++i ) {
-        unsigned int id = par.identifierOffset + i;
+        DBKeyType id = static_cast<DBKeyType>(par.identifierOffset) + static_cast<DBKeyType>(i);
 
         // ignore nulls
         writer.writeData(reader.getData(i, 0), reader.getEntryLen(i) - 1, id);

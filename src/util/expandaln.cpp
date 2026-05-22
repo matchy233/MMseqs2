@@ -227,7 +227,7 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
 
         Matcher::result_t resultAc;
         resultAc.backtrace.reserve(par.maxSeqLen + 1);
-        std::map<unsigned int, IntervalArray *> interval;
+        std::map<DBKeyType, IntervalArray *> interval;
         std::stack<IntervalArray *> intervalBuffer;
         std::vector<Matcher::result_t> resultsAc;
         resultsAc.reserve(1000);
@@ -266,9 +266,9 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                     EXIT(EXIT_FAILURE);
                 }
 
-                unsigned int bResKey = resultAb.dbKey;
+                DBKeyType bResKey = resultAb.dbKey;
                 size_t bResId = resultBcReader->getId(bResKey);
-                if (bResId == UINT_MAX) {
+                if (bResId == DB_ENTRY_NOT_FOUND) {
                     Debug(Debug::WARNING) << "Missing alignments for sequence " << bResKey << "\n";
                     continue;
                 }
@@ -282,13 +282,21 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                             EXIT(EXIT_FAILURE);
                         }
                         if (hasRep == false && resultBc.seqId == 1.0 && resultBc.qcov == 1.0) {
-                            unsigned int bSeqKey = resultBc.dbKey;
+                            DBKeyType bSeqKey = resultBc.dbKey;
                             size_t bSeqId = cReader->getId(bSeqKey);
+                            if (bSeqId == DB_ENTRY_NOT_FOUND) {
+                                Debug(Debug::ERROR) << "Invalid representative sequence key " << bSeqKey << ".\n";
+                                EXIT(EXIT_FAILURE);
+                            }
                             bSeq->mapSequence(bSeqId, bSeqKey, cReader->getData(bSeqId, thread_idx), cReader->getSeqLen(bSeqId));
                             hasRep = true;
                         } else {
-                            unsigned int cSeqKey = resultBc.dbKey;
+                            DBKeyType cSeqKey = resultBc.dbKey;
                             size_t cSeqId = cReader->getId(cSeqKey);
+                            if (cSeqId == DB_ENTRY_NOT_FOUND) {
+                                Debug(Debug::ERROR) << "Invalid target sequence key " << cSeqKey << ".\n";
+                                EXIT(EXIT_FAILURE);
+                            }
                             cSeq.mapSequence(cSeqId, cSeqKey, cReader->getData(cSeqId, thread_idx), cReader->getSeqLen(cSeqId));
                             subSeqSet.emplace_back(cSeq.numSequence, cSeq.numSequence + cSeq.L);
                         }
@@ -323,10 +331,10 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                         continue;
                     }
 
-                    unsigned int cSeqKey = resultBc.dbKey;
+                    DBKeyType cSeqKey = resultBc.dbKey;
                     // A single target sequence can cover a query just a single time
                     // If a target has the same domain several times, then we only consider one
-                    std::map<unsigned int, IntervalArray *>::iterator it = interval.find(cSeqKey);
+                    std::map<DBKeyType, IntervalArray *>::iterator it = interval.find(cSeqKey);
                     if (it != interval.end()) {
                         if (it->second->doesOverlap(resultAc.qStartPos, resultAc.qEndPos)) {
                             continue;
@@ -334,6 +342,10 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                     } else {
                         if (returnAlnRes == false || par.expansionMode == Parameters::EXPAND_RESCORE_BACKTRACE) {
                             size_t cSeqId = cReader->getId(cSeqKey);
+                            if (cSeqId == DB_ENTRY_NOT_FOUND) {
+                                Debug(Debug::ERROR) << "Invalid target sequence key " << cSeqKey << ".\n";
+                                EXIT(EXIT_FAILURE);
+                            }
                             cSeq.mapSequence(cSeqId, cSeqKey, cReader->getData(cSeqId, thread_idx), cReader->getSeqLen(cSeqId));
                         }
                         //rescoreResultByBacktrace(resultAc, aSeq, cSeq, subMat, compositionBias, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
@@ -379,7 +391,7 @@ int expandaln(int argc, const char **argv, const Command& command, bool returnAl
                 }
                 resultsBc.clear();
             }
-            for (std::map<unsigned int, IntervalArray *>::iterator it = interval.begin(); it != interval.end(); ++it) {
+            for (std::map<DBKeyType, IntervalArray *>::iterator it = interval.begin(); it != interval.end(); ++it) {
                 it->second->reset();
                 intervalBuffer.push(it->second);
             }
