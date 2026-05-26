@@ -18,6 +18,8 @@
 #include "MemoryMapped.h"
 #include "MemoryTracker.h"
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <sys/mman.h>
 #include <fstream>      // std::ifstream
 
@@ -331,12 +333,39 @@ uint64_t Util::getL2CacheSize() {
     return 262144;
 }
 
-char Util::touchMemory(const char *memory, size_t size) {
+int Util::madviseLogged(void* addr, size_t len, int advice, const char* context) {
 #ifdef HAVE_POSIX_MADVISE
-    if (size > 0 && posix_madvise ((void*)memory, size, POSIX_MADV_WILLNEED) != 0){
-        Debug(Debug::ERROR) << "posix_madvise returned an error (touchMemory)\n";
+    if (len == 0) {
+        return 0;
     }
+    int rc = posix_madvise(addr, len, advice);
+    if (rc == 0) {
+        return 0;
+    }
+    // SEQUENTIAL is a pure readahead hint; failure is never functional.
+    // WILLNEED with EINVAL is also benign: unaligned tail on large-page
+    // kernels (e.g. ARM64 64K pages) or advice unsupported for the VMA
+    // type (HugeTLB, certain filesystems). Other WILLNEED errnos
+    // (EIO/EBADF/ENOMEM) indicate real problems.
+    const char* adviceName = (advice == POSIX_MADV_WILLNEED)   ? "WILLNEED"
+                           : (advice == POSIX_MADV_SEQUENTIAL) ? "SEQUENTIAL"
+                           : (advice == POSIX_MADV_RANDOM)     ? "RANDOM"
+                           : (advice == POSIX_MADV_NORMAL)     ? "NORMAL"
+                           : (advice == POSIX_MADV_DONTNEED)   ? "DONTNEED"
+                                                               : "?";
+    bool benign = (advice == POSIX_MADV_SEQUENTIAL) || (rc == EINVAL);
+    Debug(benign ? Debug::WARNING : Debug::ERROR)
+        << "posix_madvise(" << adviceName << ") failed for " << context
+        << ": " << strerror(rc) << "\n";
+    return rc;
+#else
+    (void)addr; (void)len; (void)advice; (void)context;
+    return 0;
 #endif
+}
+
+char Util::touchMemory(const char *memory, size_t size) {
+    Util::madviseLogged((void*)memory, size, POSIX_MADV_WILLNEED, "touchMemory");
     if(size > Util::getTotalSystemMemory()){
         Debug(Debug::WARNING) << "Can not touch " << size << " into main memory\n";
         return 0;

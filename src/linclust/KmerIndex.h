@@ -4,6 +4,7 @@
 // Written by Martin Steinegger martin.steinegger@snu.ac.kr
 // storage for k-mers
 #include "MathUtil.h"
+#include "Util.h"
 #include <string>
 #include <algorithm>
 #include <fcntl.h>
@@ -182,11 +183,8 @@ public:
         this->entryCount = entryCount;
         this->indexGridSize = MathUtil::ceilIntDivision( MathUtil::ipow<size_t>(alphabetSize, kmerSize), gridResolution );
         this->entryOffsets = (size_t *) entriesOffetData;
-#if HAVE_POSIX_MADVISE
-        if (entryCount > 0 && posix_madvise (entriesData, entryCount* sizeof(KmerEntryRelative), POSIX_MADV_SEQUENTIAL) != 0){
-            Debug(Debug::ERROR) << "KmerIndex posix_madvise returned an error\n";
-        }
-#endif
+        Util::madviseLogged(entriesData, entryCount * sizeof(KmerEntryRelative),
+                            POSIX_MADV_SEQUENTIAL, "KmerIndex");
 
         this->prevKmerStartRange = 0;
         this->iteratorPos = -1;
