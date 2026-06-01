@@ -10,6 +10,7 @@
 #include "itoa.h"
 #include "Timer.h"
 #include <algorithm>
+#include <map>
 #include <unordered_set>
 #include <vector>
 
@@ -19,8 +20,8 @@
 
 
 struct ProteomeEntry {
-    unsigned int proteomeKey;
-    unsigned int referenceKey;
+    DBKeyType proteomeKey;
+    DBKeyType referenceKey;
     unsigned int proteinEntrySize;
     unsigned int clusterCount;
     unsigned int sharedEntryCount;
@@ -31,7 +32,7 @@ struct ProteomeEntry {
 
     bool isCovered;
 
-    ProteomeEntry(unsigned int proteomeKey = UINT_MAX, unsigned int referenceKey = UINT_MAX, unsigned int proteinEntrySize = 0, 
+    ProteomeEntry(DBKeyType proteomeKey = DB_KEY_INVALID, DBKeyType referenceKey = DB_KEY_INVALID, unsigned int proteinEntrySize = 0,
                 unsigned int clusterCount = 0, unsigned int sharedEntryCount = 0, float uniScore = 0.0f, float biScore = 0.0f, float ppsWeight = 0.0f,
                 bool isCovered = false)
     : proteomeKey(proteomeKey), referenceKey(referenceKey), proteinEntrySize(proteinEntrySize), 
@@ -45,7 +46,7 @@ struct ProteomeEntry {
     void reset() {
         sharedEntryCount = 0;
         clusterCount = 0;
-        referenceKey = UINT_MAX;
+        referenceKey = DB_KEY_INVALID;
         uniScore = 0.0f;
         biScore = 0.0f;
         isCovered = false;
@@ -58,7 +59,7 @@ struct ProteomeEntry {
         isCovered = true;
     }
 
-    void setReference(unsigned int referenceProteomeKey) {
+    void setReference(DBKeyType referenceProteomeKey) {
         referenceKey = referenceProteomeKey;
         isCovered = true;
     }
@@ -88,7 +89,7 @@ struct ProteomeEntry {
 };
 
 struct MemberProtein{
-    unsigned int proteomeKey;
+    DBKeyType proteomeKey;
     size_t proteinId;
     static bool compareByProteomeKeyOnly(const MemberProtein& a, const MemberProtein& b) {
         return a.proteomeKey < b.proteomeKey;
@@ -108,11 +109,11 @@ struct MemberProtein{
 
 struct ClusterEntry {
     bool isAvailable;
-    unsigned int referenceProteomeKey;
+    DBKeyType referenceProteomeKey;
     std::vector<MemberProtein> memberProteins;
-    std::vector<unsigned int> memberProteomeKeys;
-    ClusterEntry(): isAvailable(true), referenceProteomeKey(UINT_MAX) {}
-    ClusterEntry(size_t memberProteinSize) : isAvailable(true), referenceProteomeKey(UINT_MAX) {
+    std::vector<DBKeyType> memberProteomeKeys;
+    ClusterEntry(): isAvailable(true), referenceProteomeKey(DB_KEY_INVALID) {}
+    ClusterEntry(size_t memberProteinSize) : isAvailable(true), referenceProteomeKey(DB_KEY_INVALID) {
         memberProteins.reserve(memberProteinSize);
     }
 
@@ -124,7 +125,7 @@ struct ClusterEntry {
 
 };
 
-size_t getReferencByProteomeKey(unsigned int referenceKey, std::vector<MemberProtein>& memberProteins) {
+size_t getReferencByProteomeKey(DBKeyType referenceKey, std::vector<MemberProtein>& memberProteins) {
     MemberProtein val;
     val.proteomeKey = referenceKey;
     size_t id = std::lower_bound(memberProteins.begin(), memberProteins.end(), val, MemberProtein::compareByProteomeKeyOnly) - memberProteins.begin();
@@ -151,7 +152,7 @@ static char* fastfloatToBuffer(float value, char* buffer) {
 
 inline char* writeProteomeToBuffer(const ProteomeEntry& proteome, char* buffer) {
     // char* basePos = buffer;
-    char* tmpBuffer = Itoa::i32toa_sse2(proteome.proteomeKey, buffer);
+    char* tmpBuffer = Itoa::u64toa_sse2(static_cast<uint64_t>(proteome.proteomeKey), buffer);
     *(tmpBuffer - 1) = '\t';
     tmpBuffer = Util::fastSeqIdToBuffer(proteome.uniScore, tmpBuffer);
     *(tmpBuffer - 1) = '\t';
@@ -160,11 +161,11 @@ inline char* writeProteomeToBuffer(const ProteomeEntry& proteome, char* buffer) 
     return tmpBuffer;
 }
 
-void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProteomeKey, DBReader<DBKeyType>& tProteinDB, Matcher& matcher, Sequence& query, Sequence& target, std::vector<ProteomeEntry>& MAYBE_UNUSED(proteomeList), Parameters& par, unsigned int thread_idx, int swMode, std::vector<unsigned int>& localsharedEntryCount, std::vector<size_t>& proteomekeyToIndex, DBWriter& proteinAlignWriter) {
+void runAlignmentForCluster(ClusterEntry& clusterRep, DBKeyType referenceProteomeKey, DBReader<DBKeyType>& tProteinDB, Matcher& matcher, Sequence& query, Sequence& target, std::vector<ProteomeEntry>& MAYBE_UNUSED(proteomeList), Parameters& par, unsigned int thread_idx, int swMode, std::vector<unsigned int>& localsharedEntryCount, std::map<DBKeyType, size_t>& proteomekeyToIndex, DBWriter& proteinAlignWriter) {
     char buffer[1024]; 
     unsigned int qLen = 0;
     size_t queryId = DB_ENTRY_NOT_FOUND;
-    unsigned int qproteomeKey = UINT_MAX;
+    DBKeyType qproteomeKey = DB_KEY_INVALID;
     bool includeAlign = par.includeAlignFiles || par.proteomeIncludeAlignFiles;
     // find representative query protein which has the longest sequence length
     size_t referenceProteomeKeyIdx = getReferencByProteomeKey(referenceProteomeKey, clusterRep.memberProteins);
@@ -174,7 +175,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
 
     //iterate over the cluster members from referenceProteomeKeyIdx to the end
     for (size_t idx = referenceProteomeKeyIdx; idx < clusterRep.memberProteins.size();idx++) {
-        unsigned int key = clusterRep.memberProteins[idx].proteomeKey;
+        DBKeyType key = clusterRep.memberProteins[idx].proteomeKey;
         if (key != referenceProteomeKey) {
             break;
         }
@@ -205,7 +206,7 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
 
     //Alignment by representative protein and other proteins in the cluster
     for (auto& eachTargetMember : clusterRep.memberProteins){
-        unsigned int tproteomeKey = eachTargetMember.proteomeKey;
+        DBKeyType tproteomeKey = eachTargetMember.proteomeKey;
         size_t proteomeIdx = proteomekeyToIndex[tproteomeKey];
         if (eachTargetMember.proteomeKey == referenceProteomeKey) {
             continue;
@@ -239,15 +240,15 @@ void runAlignmentForCluster(ClusterEntry& clusterRep, unsigned int referenceProt
     }
 }
 
-bool findReferenceProteome(std::vector<ProteomeEntry>& proteomeList, unsigned int& referenceProteomeKey, DBReader<DBKeyType>& MAYBE_UNUSED(tProteinDB), Parameters& par,
-                         std::vector<unsigned int>& availableProteomeKeys, std::vector<size_t>& proteomekeyToIndex, unsigned int totalClusterCount) {
+bool findReferenceProteome(std::vector<ProteomeEntry>& proteomeList, DBKeyType& referenceProteomeKey, DBReader<DBKeyType>& MAYBE_UNUSED(tProteinDB), Parameters& par,
+                         std::vector<DBKeyType>& availableProteomeKeys, std::map<DBKeyType, size_t>& proteomekeyToIndex, unsigned int totalClusterCount) {
     if (availableProteomeKeys.empty()) {
         Debug(Debug::INFO) << "No available proteomes found" << "\n"; 
         return false;
     }
     //sort availableProteomeKeys by clusterCount
     SORT_SERIAL(availableProteomeKeys.begin(), availableProteomeKeys.end(),
-                [&](unsigned int a, unsigned int b)
+                [&](DBKeyType a, DBKeyType b)
     {
         const auto &pa = proteomeList[proteomekeyToIndex[a]];
         const auto &pb = proteomeList[proteomekeyToIndex[b]];
@@ -261,7 +262,7 @@ bool findReferenceProteome(std::vector<ProteomeEntry>& proteomeList, unsigned in
         }
     });
 
-    unsigned int nextProteomeId = availableProteomeKeys.front();
+    DBKeyType nextProteomeId = availableProteomeKeys.front();
     if (par.ppsWeightFile.empty() && par.proteomeWeightFile.empty()) {
         referenceProteomeKey = nextProteomeId;
     } else{
@@ -306,25 +307,30 @@ int proteomecluster(int argc, const char **argv, const Command &command){
     timer.reset();
     tProteinDB.sortSourceById();
     std::vector<ProteomeEntry> proteomeList(tProteinDB.getSourceSize());
-    std::vector<unsigned int> availableProteomeKeys;
+    std::vector<DBKeyType> availableProteomeKeys;
     // TODO : Can be optimized. Is there any smarter way to get protein entry size in each source?
     for (size_t i = 0; i < tProteinDB.getSize(); i++) {
         DBKeyType dbKey = tProteinDB.getDbKey(i); //Need check gg with cascaded
         size_t lookupId = tProteinDB.getLookupIdByKey(dbKey);
-        const unsigned int proteomeSourceId = tProteinDB.getLookupFileNumber(lookupId);
-        if (proteomeList[proteomeSourceId].proteomeKey == UINT_MAX) { //need to optimize. Is tProteinDB sorted by sourceEntry?
+        const DBKeyType proteomeSourceId = tProteinDB.getLookupFileNumber(lookupId);
+        const size_t proteomeSourceIdx = static_cast<size_t>(proteomeSourceId);
+        if (proteomeSourceIdx >= proteomeList.size()) {
+            Debug(Debug::ERROR) << "Invalid proteome source id " << proteomeSourceId << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if (proteomeList[proteomeSourceIdx].proteomeKey == DB_KEY_INVALID) { //need to optimize. Is tProteinDB sorted by sourceEntry?
             // Add proteomeKey to proteomeList
             // std::cout << "Proteome Source Id: " << proteomeSourceId << std::endl;
-            proteomeList[proteomeSourceId].proteomeKey = proteomeSourceId;
+            proteomeList[proteomeSourceIdx].proteomeKey = proteomeSourceId;
             availableProteomeKeys.push_back(proteomeSourceId);
         }
-        proteomeList[proteomeSourceId].proteinEntrySize++;
+        proteomeList[proteomeSourceIdx].proteinEntrySize++;
     }
     SORT_PARALLEL(proteomeList.begin(), proteomeList.end(), ProteomeEntry::compareByproteomeKey); // need it ? 
     proteomeList.resize(availableProteomeKeys.size()); proteomeList.shrink_to_fit();
 
     // Setup 1-2. Get proteomeKey to index map. proteomekeyToIndex's index is proteomeKey and value is index of proteomeList
-    std::vector<size_t> proteomekeyToIndex(tProteinDB.getSourceSize(),-1);
+    std::map<DBKeyType, size_t> proteomekeyToIndex;
     for (size_t i = 0; i < proteomeList.size(); ++i) {
         proteomekeyToIndex[proteomeList[i].proteomeKey] = i;
     }
@@ -339,10 +345,10 @@ int proteomecluster(int argc, const char **argv, const Command &command){
         // Debug(Debug::INFO) << "Read PPS Weight File\n";
         while (*weightData != '\0') {
             Util::getWordsOfLine(weightData, entry, 255);
-            size_t proteomeKey = tProteinDB.getSourceKey(tProteinDB.getSourceIdByFileName(std::string(entry[0], entry[1] - entry[0] - 1)));
+            DBKeyType proteomeKey = tProteinDB.getSourceKey(tProteinDB.getSourceIdByFileName(std::string(entry[0], entry[1] - entry[0] - 1)));
             float precomputedWeight = std::stof(entry[1]);
             //Debug if proteomeKey is larger than the size of proteomeList than error
-            if (proteomeKey == SIZE_MAX) {
+            if (proteomeKey == DB_KEY_INVALID) {
                 Debug(Debug::ERROR) << "Could not find\n";
                 Debug(Debug::ERROR) << "Proteome Key: " << proteomeKey << " name: " << std::string(entry[0], entry[1] - entry[0] - 1)<< "in the source. Proteome List Size : " << proteomeList.size() << "\n";
                 EXIT(EXIT_FAILURE);
@@ -376,7 +382,7 @@ int proteomecluster(int argc, const char **argv, const Command &command){
         for (size_t id = 0; id < linResDB.getSize(); ++id) {
             char buffer[1024 + 32768 * 4];
             char* clustData = linResDB.getData(id, thread_idx);
-            std::unordered_set<unsigned int> proteomeKeys;
+            std::unordered_set<DBKeyType> proteomeKeys;
             ClusterEntry eachClusterRep;
             while (*clustData != '\0') {
                 Util::parseKey(clustData, buffer);
@@ -471,10 +477,10 @@ int proteomecluster(int argc, const char **argv, const Command &command){
     
     Debug(Debug::INFO) << "Start Proteome Clustering " << "\n";
     timer.reset();
-    unsigned int referenceProteomeKey = UINT_MAX;
+    DBKeyType referenceProteomeKey = DB_KEY_INVALID;
     //Main Loop - alignment
     while (findReferenceProteome(proteomeList, referenceProteomeKey, tProteinDB, par, availableProteomeKeys, proteomekeyToIndex, totalClusterCount)) {
-        Debug(Debug::INFO) << "Reference Proteome. Key: " << referenceProteomeKey <<  ", Name: " << tProteinDB.getSourceFileName(referenceProteomeKey) << "\n";
+        Debug(Debug::INFO) << "Reference Proteome. Key: " << referenceProteomeKey <<  ", Name: " << tProteinDB.getSourceFileName(static_cast<size_t>(referenceProteomeKey)) << "\n";
         ProteomeEntry& referenceProteome = proteomeList[proteomekeyToIndex[referenceProteomeKey]];
         const unsigned int referenceEntrySize = referenceProteome.proteinEntrySize;
 
@@ -510,7 +516,7 @@ int proteomecluster(int argc, const char **argv, const Command &command){
         totalProteomeAlnResultsOutString.append(proteomeBuffer, endPos - proteomeBuffer);
 
         // Done Alignment. Parse the results and prepare for the next iteration
-        std::vector<unsigned int> newAvailableProteomeKeys;
+        std::vector<DBKeyType> newAvailableProteomeKeys;
         newAvailableProteomeKeys.reserve(availableProteomeKeys.size());
 
         #pragma omp parallel
@@ -518,14 +524,14 @@ int proteomecluster(int argc, const char **argv, const Command &command){
             std::string localProteomeAlnResultsOutString;
             localProteomeAlnResultsOutString.reserve(1024*1024);
 
-            std::vector<unsigned int> localNextAvailableProteomeKeys;
+            std::vector<DBKeyType> localNextAvailableProteomeKeys;
             localNextAvailableProteomeKeys.reserve(availableProteomeKeys.size());
 
             char localBuffer[1024];
 
             #pragma omp for schedule(dynamic, 1)
             for (size_t i = 0; i < availableProteomeKeys.size(); i++) {
-                unsigned int key = availableProteomeKeys[i];
+                DBKeyType key = availableProteomeKeys[i];
                 ProteomeEntry &proteome = proteomeList[proteomekeyToIndex[key]];
                 if (proteome.proteomeKey == referenceProteomeKey) {
                     continue;
@@ -569,10 +575,10 @@ int proteomecluster(int argc, const char **argv, const Command &command){
             //Only one proteome left for the next iteration => write self reference data and exit proteomeclustering.
             Debug(Debug::INFO) << "Only one proteome is left\n";
             
-            unsigned int singletonRefKeyNextIter = availableProteomeKeys[0];
+            DBKeyType singletonRefKeyNextIter = availableProteomeKeys[0];
             ProteomeEntry& singletonRefProteome = proteomeList[proteomekeyToIndex[singletonRefKeyNextIter]];
             singletonRefProteome.setSelfReference();
-            Debug(Debug::INFO) << "Reference Proteome. Key:  " << singletonRefProteome.proteomeKey  << ", Name: " << tProteinDB.getSourceFileName(singletonRefProteome.proteomeKey) << "\n";
+            Debug(Debug::INFO) << "Reference Proteome. Key:  " << singletonRefProteome.proteomeKey  << ", Name: " << tProteinDB.getSourceFileName(static_cast<size_t>(singletonRefProteome.proteomeKey)) << "\n";
 
             //write self aligned result to out_aln_proteome
             std::string totalProteomeAlnResultsOutString;
@@ -603,7 +609,7 @@ int proteomecluster(int argc, const char **argv, const Command &command){
         #ifdef OPENMP
             // thread_idx = (unsigned int) omp_get_thread_num();
         #endif    
-            std::vector<unsigned int> proteomeKeys;
+            std::vector<DBKeyType> proteomeKeys;
             proteomeKeys.reserve(proteomeList.size());
             std::vector<unsigned int> localProteomeCount(proteomeList.size(), 0);
             #pragma omp for schedule(dynamic, 1)

@@ -467,8 +467,8 @@ int Util::omp_thread_count() {
     n += 1;
     return n;
 }
-std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const unsigned char removeSplit) {
-    std::map<unsigned int, std::string> mapping;
+std::map<DBKeyType, std::string> Util::readLookup(const std::string& file, const unsigned char removeSplit) {
+    std::map<DBKeyType, std::string> mapping;
     if (file.length() > 0) {
         std::ifstream mappingStream(file);
         if (mappingStream.fail()) {
@@ -479,7 +479,7 @@ std::map<unsigned int, std::string> Util::readLookup(const std::string& file, co
         std::string line;
         while (std::getline(mappingStream, line)) {
             std::vector<std::string> split = Util::split(line, "\t");
-            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
+            DBKeyType id = Util::fast_atoi<DBKeyType>(split[0].c_str());
 
             std::string& name = split[1];
 

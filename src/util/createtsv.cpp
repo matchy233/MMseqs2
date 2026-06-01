@@ -61,7 +61,7 @@ int createtsv(int argc, const char **argv, const Command &command) {
 
     uint16_t extended = DBReader<DBKeyType>::getExtendedDbtype(reader->getDbtype());
     bool needSET = false;
-    std::map<unsigned int, std::string> qSetToSource, tSetToSource;
+    std::map<DBKeyType, std::string> qSetToSource, tSetToSource;
     if (extended & Parameters::DBTYPE_EXTENDED_SET) {
         needSET = true;
         if (hasTargetDB) {

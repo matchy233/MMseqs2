@@ -95,8 +95,8 @@ qset        Query set
 tset        Target set
  */
 
-std::map<DBKeyType, unsigned int> readKeyToSet(const std::string& file) {
-    std::map<DBKeyType, unsigned int> mapping;
+std::map<DBKeyType, DBKeyType> readKeyToSet(const std::string& file) {
+    std::map<DBKeyType, DBKeyType> mapping;
     if (file.length() == 0) {
         return mapping;
     }
@@ -111,7 +111,7 @@ std::map<DBKeyType, unsigned int> readKeyToSet(const std::string& file) {
             Debug(Debug::WARNING) << "Not enough columns in lookup file " << file << "\n";
             continue;
         }
-        mapping.emplace(Util::fast_atoi<DBKeyType>(entry[0]), Util::fast_atoi<unsigned int>(entry[2]));
+        mapping.emplace(Util::fast_atoi<DBKeyType>(entry[0]), Util::fast_atoi<DBKeyType>(entry[2]));
         data = Util::skipLine(data);
     }
     lookup.close();
@@ -119,8 +119,8 @@ std::map<DBKeyType, unsigned int> readKeyToSet(const std::string& file) {
 }
 
 
-std::map<unsigned int, std::string> readSetToSource(const std::string& file) {
-    std::map<unsigned int, std::string> mapping;
+std::map<DBKeyType, std::string> readSetToSource(const std::string& file) {
+    std::map<DBKeyType, std::string> mapping;
     if (file.length() == 0) {
         return mapping;
     }
@@ -137,7 +137,7 @@ std::map<unsigned int, std::string> readSetToSource(const std::string& file) {
         }
         data = Util::skipLine(data);
         std::string source(entry[1], data - entry[1] - 1);
-        mapping.emplace(Util::fast_atoi<unsigned int>(entry[0]), source);
+        mapping.emplace(Util::fast_atoi<DBKeyType>(entry[0]), source);
     }
     source.close();
     return mapping;
@@ -181,8 +181,8 @@ int convertalignments(int argc, const char **argv, const Command &command) {
 
     int dbaccessMode = needSequenceDB ? (DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA) : (DBReader<DBKeyType>::USE_INDEX);
 
-    std::map<DBKeyType, unsigned int> qKeyToSet;
-    std::map<DBKeyType, unsigned int> tKeyToSet;
+    std::map<DBKeyType, DBKeyType> qKeyToSet;
+    std::map<DBKeyType, DBKeyType> tKeyToSet;
     if (needLookup) {
         std::string file1 = par.db1 + ".lookup";
         std::string file2 = par.db2 + ".lookup";
@@ -190,8 +190,8 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         tKeyToSet = readKeyToSet(file2);
     }
 
-    std::map<unsigned int, std::string> qSetToSource;
-    std::map<unsigned int, std::string> tSetToSource;
+    std::map<DBKeyType, std::string> qSetToSource;
+    std::map<DBKeyType, std::string> tSetToSource;
     if (needSource) {
         std::string file1 = par.db1 + ".source";
         std::string file2 = par.db2 + ".source";

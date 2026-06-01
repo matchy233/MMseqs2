@@ -757,7 +757,7 @@ template <typename T> std::string DBReader<T>::getLookupEntryName (size_t id){
     return lookup[id].entryName;
 }
 
-template <typename T> unsigned int DBReader<T>::getLookupFileNumber(size_t id){
+template <typename T> DBKeyType DBReader<T>::getLookupFileNumber(size_t id){
     if (id >= lookupSize){
         Debug(Debug::ERROR) << "Invalid database read for id=" << id << ", database index=" << dataFileName << ".lookup\n";
         Debug(Debug::ERROR) << "getLookupFileNumber: local id (" << id << ") >= db size (" << lookupSize << ")\n";
@@ -1149,7 +1149,7 @@ void DBReader<T>::readLookup(char *data, size_t dataSize, DBReader::LookupEntry 
         Util::getWordsOfLine(lookupData, cols, 3);
         lookup[i].id = Util::fast_atoi<size_t>(cols[0]);
         lookup[i].entryName = std::string(cols[1], (cols[2] - cols[1]) - 1);
-        lookup[i].fileNumber = Util::fast_atoi<size_t>(cols[2]);
+        lookup[i].fileNumber = Util::fast_atoi<DBKeyType>(cols[2]);
         lookupData = Util::skipLine(lookupData);
 
         currPos = lookupData - (char *) data;

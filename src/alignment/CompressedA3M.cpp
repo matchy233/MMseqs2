@@ -50,6 +50,12 @@ void readLocalId(const char **ptr, DBLocalId &result) {
 #endif
 }
 
+void writeLocalId(std::string &buffer, DBLocalId value) {
+    for (size_t i = 0; i < sizeof(DBLocalId); ++i) {
+        buffer.append(1, static_cast<char>((static_cast<uint64_t>(value) >> (8 * i)) & 0xFF));
+    }
+}
+
 std::string CompressedA3M::extractA3M(const char *data, size_t data_size,
                                       DBReader<DBKeyType>& sequenceReader,
                                       DBReader<DBKeyType>& headerReader, int thread_idx) {
@@ -287,7 +293,7 @@ void CompressedA3M::extractMatcherResults(DBKeyType &key, std::vector<Matcher::r
 void CompressedA3M::hitToBuffer(size_t targetId, const Matcher::result_t& hit, std::string& buffer) {
 #ifndef CA3M_DEBUG
     DBLocalId entryIndex = static_cast<DBLocalId>(targetId);
-    buffer.append(reinterpret_cast<const char *>(&entryIndex), sizeof(DBLocalId));
+    writeLocalId(buffer, entryIndex);
 #else
     buffer.append(SSTR(targetId));
     buffer.append(1, '\t');

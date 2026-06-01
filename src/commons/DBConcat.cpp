@@ -201,7 +201,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         }
     }
 
-    unsigned int maxSetIdA = 0;
+    DBKeyType maxSetIdA = 0;
     // handle lookup
     if (shouldConcatLookup) {
         DBReader<DBKeyType> lookupReaderA(dataFileNameA.c_str(), indexFileNameA.c_str(), 1, DBReader<DBKeyType>::USE_LOOKUP);
@@ -216,7 +216,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         for (size_t i = 0; i < lookupReaderA.getLookupSize(); ++i) {
             DBKeyType prevKeyA = lookupA[i].id;
             std::string accA = lookupA[i].entryName;
-            unsigned int setIdA = lookupA[i].fileNumber;
+            DBKeyType setIdA = lookupA[i].fileNumber;
             if (setIdA > maxSetIdA) {
                 maxSetIdA = setIdA;
             }
@@ -228,7 +228,7 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
             line.append(1, '\t');
             line.append(accA);
             line.append(1, '\t');
-            tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(setIdA), buffer);
+            tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(setIdA), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\n');
             
@@ -248,17 +248,17 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
         for (size_t i = 0; i < lookupReaderB.getLookupSize(); ++i) {
             DBKeyType prevKeyB = lookupB[i].id;
             std::string accB = lookupB[i].entryName;
-            unsigned int setIdB = lookupB[i].fileNumber;
+            DBKeyType setIdB = lookupB[i].fileNumber;
             
             DBKeyType newKeyB = dbBKeyMap(prevKeyB);
-            unsigned int newSetIdB = maxSetIdA + 1 + setIdB;
+            DBKeyType newSetIdB = maxSetIdA + 1 + setIdB;
 
             char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newKeyB), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\t');
             line.append(accB);
             line.append(1, '\t');
-            tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(newSetIdB), buffer);
+            tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newSetIdB), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\n');
             
@@ -279,22 +279,22 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
 
     // handle source
     if (shouldConcatSource) {
-        unsigned int sourceMaxSetIdA = 0;
-        std::map<unsigned int, std::string> sourceMapA = Util::readLookup((dataFileNameA + ".source"), false);
-        std::map<unsigned int, std::string>::iterator itA;
+        DBKeyType sourceMaxSetIdA = 0;
+        std::map<DBKeyType, std::string> sourceMapA = Util::readLookup((dataFileNameA + ".source"), false);
+        std::map<DBKeyType, std::string>::iterator itA;
         
         char buffer[1024];
         std::string line;
 
         FILE* sourceFilePtr = fopen((dataFileNameC + ".source").c_str(), "w");
         for (itA = sourceMapA.begin(); itA != sourceMapA.end(); itA++) {
-            unsigned int setIdA = itA->first;
+            DBKeyType setIdA = itA->first;
             std::string fileNameA = itA->second;
             if (setIdA > sourceMaxSetIdA) {
                 sourceMaxSetIdA = setIdA;
             }
 
-            char *tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(setIdA), buffer);
+            char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(setIdA), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\t');
             line.append(fileNameA);
@@ -314,16 +314,16 @@ DBConcat::DBConcat(const std::string &dataFileNameA, const std::string &indexFil
             EXIT(EXIT_FAILURE);
         }
 
-        std::map<unsigned int, std::string> sourceMapB = Util::readLookup((dataFileNameB + ".source"), false);
-        std::map<unsigned int, std::string>::iterator itB;
+        std::map<DBKeyType, std::string> sourceMapB = Util::readLookup((dataFileNameB + ".source"), false);
+        std::map<DBKeyType, std::string>::iterator itB;
 
         for (itB = sourceMapB.begin(); itB != sourceMapB.end(); itB++) {
-            unsigned int setIdB = itB->first;
+            DBKeyType setIdB = itB->first;
             std::string fileNameB = itB->second;
 
-            unsigned int newSetIdB = sourceMaxSetIdA + 1 + setIdB;
+            DBKeyType newSetIdB = sourceMaxSetIdA + 1 + setIdB;
 
-            char *tmpBuff = Itoa::u32toa_sse2(static_cast<uint64_t>(newSetIdB), buffer);
+            char *tmpBuff = Itoa::u64toa_sse2(static_cast<uint64_t>(newSetIdB), buffer);
             line.append(buffer, tmpBuff - buffer - 1);
             line.append(1, '\t');
             line.append(fileNameB);

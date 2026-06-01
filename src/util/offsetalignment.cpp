@@ -369,11 +369,11 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
 #pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < entryCount; ++i) {
             progress.updateProgress();
-            unsigned int queryKey=UINT_MAX;
+            DBKeyType queryKey = DB_KEY_INVALID;
             unsigned int qLen = UINT_MAX;
 
             if (Parameters::isEqualDbtype(queryDbType, Parameters::DBTYPE_NUCLEOTIDES)) {
-                queryKey = i;
+                queryKey = static_cast<DBKeyType>(i);
                 if (contigExists[i] == 0) {
                     continue;
                 }

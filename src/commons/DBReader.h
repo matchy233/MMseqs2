@@ -116,7 +116,7 @@ public:
     struct LookupEntry {
         T id;
         std::string entryName;
-        unsigned int fileNumber;
+        DBKeyType fileNumber;
 
         // we need a non-strict-weak ordering function here
         // so our upper_bound call works correctly
@@ -285,7 +285,7 @@ public:
     size_t getLookupIdByAccession(const std::string& accession);
     T getLookupKey(size_t id);
     std::string getLookupEntryName(size_t id);
-    unsigned int getLookupFileNumber(size_t id);
+    DBKeyType getLookupFileNumber(size_t id);
     LookupEntry* getLookup() { return lookup; };
 
     size_t getSourceSize() const;

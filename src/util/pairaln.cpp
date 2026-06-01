@@ -200,14 +200,14 @@ int pairaln(int argc, const char **argv, const Command& command) {
     DBReader<DBKeyType> qdbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<DBKeyType>::USE_LOOKUP_REV);
     qdbr.open(DBReader<DBKeyType>::NOSORT);
     DBReader<DBKeyType>::LookupEntry* lookup = qdbr.getLookup();
-    unsigned int maxFileNumber = 0;
-    for (unsigned int i = 0; i < qdbr.getLookupSize(); i++) {
+    DBKeyType maxFileNumber = 0;
+    for (size_t i = 0; i < qdbr.getLookupSize(); i++) {
         maxFileNumber = std::max(maxFileNumber, lookup[i].fileNumber);
     }
     //build a mapping from file number to ids from lookup
-    std::vector<std::vector<unsigned int>> fileToIds(maxFileNumber + 1, std::vector<unsigned int>());
+    std::vector<std::vector<DBKeyType>> fileToKeys(static_cast<size_t>(maxFileNumber) + 1, std::vector<DBKeyType>());
     for (size_t i = 0; i < qdbr.getLookupSize(); ++i) {
-        fileToIds[lookup[i].fileNumber].push_back(lookup[i].id);
+        fileToKeys[static_cast<size_t>(lookup[i].fileNumber)].push_back(lookup[i].id);
     }
     IndexReader *targetHeaderReaderIdx = NULL;
     if(par.pairfilter == Parameters::PAIRALN_FILTER_PROXIMITY) {
@@ -227,13 +227,13 @@ int pairaln(int argc, const char **argv, const Command& command) {
 
     size_t localThreads = 1;
 #ifdef OPENMP
-    localThreads = std::max(std::min((size_t)par.threads, fileToIds.size()), (size_t)1);
+    localThreads = std::max(std::min((size_t)par.threads, fileToKeys.size()), (size_t)1);
 #endif
 
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), localThreads, par.compressed, alnDbr.getDbtype());
     resultWriter.open();
 
-    Debug::Progress progress(fileToIds.size());
+    Debug::Progress progress(fileToKeys.size());
 #pragma omp parallel num_threads(localThreads)
     {
         unsigned int thread_idx = 0;
@@ -251,20 +251,25 @@ int pairaln(int argc, const char **argv, const Command& command) {
         output.reserve(100000);
         bool hasBacktrace = false;
         UniProtConverter converter;
-        DBKeyType minResultDbKey = static_cast<DBKeyType>(-1);
-        Matcher::result_t emptyResult(static_cast<DBKeyType>(-1), 0, 0, 0, 0, 0,
+        DBKeyType minResultDbKey = DB_KEY_INVALID;
+        Matcher::result_t emptyResult(DB_KEY_INVALID, 0, 0, 0, 0, 0,
                                       0, UINT_MAX, 0, 0, UINT_MAX, 0, 0, "1M");
 #pragma omp for schedule(dynamic, 1)
-        for (size_t fileNumber = 0; fileNumber < fileToIds.size(); fileNumber++) {
+        for (size_t fileNumber = 0; fileNumber < fileToKeys.size(); fileNumber++) {
             char buffer[1024 + 32768 * 4];
             findPair.clear();
             taxonToPair.clear();
             progress.updateProgress();
 
             // find intersection between all proteins
-            for (size_t i = 0; i < fileToIds[fileNumber].size(); i++) {
+            for (size_t i = 0; i < fileToKeys[fileNumber].size(); i++) {
                 result.clear();
-                size_t id = fileToIds[fileNumber][i];
+                DBKeyType key = fileToKeys[fileNumber][i];
+                size_t id = alnDbr.getId(key);
+                if (id == DB_ENTRY_NOT_FOUND) {
+                    Debug(Debug::ERROR) << "Missing alignment result for query key " << key << ".\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 Matcher::readAlignmentResults(result, alnDbr.getData(id, thread_idx), true);
                 for (size_t resIdx = 0; resIdx < result.size(); ++resIdx) {
                     hasBacktrace = result[resIdx].backtrace.size() > 0;
@@ -295,20 +300,25 @@ int pairaln(int argc, const char **argv, const Command& command) {
             // fill taxonToPair vector
             std::unordered_map<unsigned int, size_t>::iterator it;
             for (it = findPair.begin(); it != findPair.end(); ++it) {
-                size_t thresholdToPair = (par.pairmode == Parameters::PAIRALN_MODE_ALL_PER_SPECIES) ? 1 : fileToIds[fileNumber].size() - 1;
+                size_t thresholdToPair = (par.pairmode == Parameters::PAIRALN_MODE_ALL_PER_SPECIES) ? 1 : fileToKeys[fileNumber].size() - 1;
                 if (it->second > thresholdToPair) {
                     taxonToPair.emplace_back(it->first);
                 }
             }
             std::sort(taxonToPair.begin(), taxonToPair.end());
             if(par.pairfilter == Parameters::PAIRALN_FILTER_PROXIMITY){
-                std::vector<std::vector<Matcher::result_t>> resultPerId(fileToIds[fileNumber].size());
-                std::vector<std::string> outputs(fileToIds[fileNumber].size());
+                std::vector<std::vector<Matcher::result_t>> resultPerId(fileToKeys[fileNumber].size());
+                std::vector<std::string> outputs(fileToKeys[fileNumber].size());
                 std::vector<size_t> foundIds;
 
-                for (size_t i = 0; i < fileToIds[fileNumber].size(); i++) {
+                for (size_t i = 0; i < fileToKeys[fileNumber].size(); i++) {
                     resultPerId[i].clear();
-                    size_t id = fileToIds[fileNumber][i];
+                    DBKeyType key = fileToKeys[fileNumber][i];
+                    size_t id = alnDbr.getId(key);
+                    if (id == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Missing alignment result for query key " << key << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     Matcher::readAlignmentResults(resultPerId[i], alnDbr.getData(id, thread_idx), true);
                     // find pairs
                     for (size_t resIdx = 0; resIdx < resultPerId[i].size(); ++resIdx) {
@@ -395,13 +405,18 @@ int pairaln(int argc, const char **argv, const Command& command) {
 //                }
                 for(size_t i = 0; i < resultPerId.size(); i++) {
                     resultWriter.writeData(outputs[i].c_str(), outputs[i].length(),
-                                           alnDbr.getDbKey(fileToIds[fileNumber][i]), thread_idx);
+                                           fileToKeys[fileNumber][i], thread_idx);
                 }
             } else {
-                for (size_t i = 0; i < fileToIds[fileNumber].size(); i++) {
+                for (size_t i = 0; i < fileToKeys[fileNumber].size(); i++) {
                     result.clear();
                     output.clear();
-                    size_t id = fileToIds[fileNumber][i];
+                    DBKeyType key = fileToKeys[fileNumber][i];
+                    size_t id = alnDbr.getId(key);
+                    if (id == DB_ENTRY_NOT_FOUND) {
+                        Debug(Debug::ERROR) << "Missing alignment result for query key " << key << ".\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     Matcher::readAlignmentResults(result, alnDbr.getData(id, thread_idx), true);
                     // find pairs
                     for (size_t resIdx = 0; resIdx < result.size(); ++resIdx) {
@@ -444,7 +459,7 @@ int pairaln(int argc, const char **argv, const Command& command) {
                         }
                     }
 
-                    resultWriter.writeData(output.c_str(), output.length(), alnDbr.getDbKey(id), thread_idx);
+                    resultWriter.writeData(output.c_str(), output.length(), key, thread_idx);
                 }
             }
         }

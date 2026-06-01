@@ -45,8 +45,8 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
     for (size_t i = 0; i < qdbr.getSize(); i++) {
         DBKeyType dbKey = qdbr.getDbKey(i);
         size_t lookupId = qdbr.getLookupIdByKey(dbKey);
-        const unsigned int proteomeSourceId = qdbr.getLookupFileNumber(lookupId);
-        qSourceIdtoNumEntries[proteomeSourceId]++;
+        const DBKeyType proteomeSourceId = qdbr.getLookupFileNumber(lookupId);
+        qSourceIdtoNumEntries[static_cast<size_t>(proteomeSourceId)]++;
     }
 
     const size_t flushSize = 100000000;
@@ -72,7 +72,7 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
                 const DBKeyType queryDbKey = alndbr.getDbKey(id);
                 // const unsigned int qId = qdbr.getId(queryDbKey);
                 size_t qLookupId = qdbr.getLookupIdByKey(queryDbKey);
-                const unsigned int querySourceId = qdbr.getLookupFileNumber(qLookupId);
+                const DBKeyType querySourceId = qdbr.getLookupFileNumber(qLookupId);
                 char *data = alndbr.getData(id, thread_idx);
                 // localMatchResults.clear();
                 std::fill(localMatchResults.begin(), localMatchResults.end(), 0);
@@ -81,16 +81,16 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
                     const DBKeyType targetDbKey = Util::fast_atoi<DBKeyType>(buffer);
                     // const unsigned int tId = tdbr.getId(targetDbKey);  
                     size_t tLookupId = tdbr.getLookupIdByKey(targetDbKey);
-                    const unsigned int targetSourceId = tdbr.getLookupFileNumber(tLookupId);
-                    if (localMatchResults[targetSourceId] == 0) {
-                        localMatchResults[targetSourceId] = 1;
+                    const DBKeyType targetSourceId = tdbr.getLookupFileNumber(tLookupId);
+                    if (localMatchResults[static_cast<size_t>(targetSourceId)] == 0) {
+                        localMatchResults[static_cast<size_t>(targetSourceId)] = 1;
                     }
                     data = Util::skipLine(data);
                 }
                 for (size_t t = 0; t < tdbSourceSize; ++t) {
                     if (localMatchResults[t] != 0) {
 #pragma omp atomic
-                        scoreLookupTable[querySourceId][t] += localMatchResults[t];
+                        scoreLookupTable[static_cast<size_t>(querySourceId)][t] += localMatchResults[t];
                     }
                 }
             }
@@ -102,14 +102,14 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
 
         for (size_t q = 0; q < qdbSourceSize; ++q) {
             for (size_t t = 0; t < tdbSourceSize; ++t) {
-                char* tmpBuffer = Itoa::i32toa_sse2(t, buffer);
+                char* tmpBuffer = Itoa::u64toa_sse2(static_cast<uint64_t>(t), buffer);
                 *(tmpBuffer - 1) = '\t';
                 float score = static_cast<float>(scoreLookupTable[q][t]) / static_cast<float>(qSourceIdtoNumEntries[q]);
                 tmpBuffer = Util::fastSeqIdToBuffer(score, tmpBuffer);
                 *(tmpBuffer - 1) = '\n';
                 alnResultsOutString.append(buffer, tmpBuffer - buffer);
             }
-            resultWriter.writeData(alnResultsOutString.c_str(), alnResultsOutString.length(), q, 0);
+            resultWriter.writeData(alnResultsOutString.c_str(), alnResultsOutString.length(), static_cast<DBKeyType>(q), 0);
             alnResultsOutString.clear();
         }
     }
@@ -126,4 +126,3 @@ int parseproteomealignments(int argc, const char **argv, const Command &command)
 
     return EXIT_SUCCESS;
 }
-
