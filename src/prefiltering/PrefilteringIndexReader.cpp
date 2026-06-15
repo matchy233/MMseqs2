@@ -81,8 +81,16 @@ void PrefilteringIndexReader::createIndexFile(const std::string &outDB,
     const int spacedKmer = (hasSpacedKmer) ? 1 : 0;
     const int headers1 = (hdbr1 != NULL) ? 1 : 0;
     const int headers2 = (hdbr2 != NULL) ? 1 : 0;
-    const int seqType = dbr1->getDbtype();
-    const int srcSeqType = (dbr2 !=NULL) ? dbr2->getDbtype() : seqType;
+    int seqType = dbr1->getDbtype();
+    int srcSeqType = (dbr2 != NULL) ? dbr2->getDbtype() : seqType;
+#ifdef RIBOSEEK
+    if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES) && Sequence::getAuxInfo(seqType) != NULL) {
+        seqType = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_AMINO_ACIDS, DBReader<unsigned int>::getExtendedDbtype(seqType));
+    }
+    if (Parameters::isEqualDbtype(srcSeqType, Parameters::DBTYPE_NUCLEOTIDES) && Sequence::getAuxInfo(srcSeqType) != NULL) {
+        srcSeqType = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_AMINO_ACIDS, DBReader<unsigned int>::getExtendedDbtype(srcSeqType));
+    }
+#endif
     int metadata[] = {maxSeqLen, kmerSize, biasCorr, alphabetSize, mask, spacedKmer, kmerThr, seqType, srcSeqType, headers1, headers2, splits};
     char *metadataptr = (char *) &metadata;
     writer.writeData(metadataptr, sizeof(metadata), META, SPLIT_META);

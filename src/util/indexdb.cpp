@@ -4,6 +4,7 @@
 #include "PrefilteringIndexReader.h"
 #include "Prefiltering.h"
 #include "Parameters.h"
+#include "Sequence.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -85,8 +86,18 @@ int indexdb(int argc, const char **argv, const Command &command) {
         dbr2->open(DBReader<unsigned int>::NOSORT);
     }
 
-    const bool db1IsNucl = Parameters::isEqualDbtype(dbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
-    const bool db2IsNucl = dbr2 != NULL && Parameters::isEqualDbtype(dbr2->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
+    int db1Type = dbr.getDbtype();
+    int db2Type = (dbr2 != NULL) ? dbr2->getDbtype() : db1Type;
+#ifdef RIBOSEEK
+    if (Parameters::isEqualDbtype(db1Type, Parameters::DBTYPE_NUCLEOTIDES) && Sequence::getAuxInfo(db1Type) != NULL) {
+        db1Type = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_AMINO_ACIDS, DBReader<unsigned int>::getExtendedDbtype(db1Type));
+    }
+    if (Parameters::isEqualDbtype(db2Type, Parameters::DBTYPE_NUCLEOTIDES) && Sequence::getAuxInfo(db2Type) != NULL) {
+        db2Type = DBReader<unsigned int>::setExtendedDbtype(Parameters::DBTYPE_AMINO_ACIDS, DBReader<unsigned int>::getExtendedDbtype(db2Type));
+    }
+#endif
+    const bool db1IsNucl = Parameters::isEqualDbtype(db1Type, Parameters::DBTYPE_NUCLEOTIDES);
+    const bool db2IsNucl = dbr2 != NULL && Parameters::isEqualDbtype(db2Type, Parameters::DBTYPE_NUCLEOTIDES);
     BaseMatrix *seedSubMat = Prefiltering::getSubstitutionMatrix(par.seedScoringMatrixFile, par.alphabetSize, 8.0f, false, (db1IsNucl && db2IsNucl));
 
     // memoryLimit in bytes
@@ -120,7 +131,7 @@ int indexdb(int argc, const char **argv, const Command &command) {
         par.kmerSize = 0;
         par.split = 1;
     } else {
-        Prefiltering::setupSplit(dbr, seedSubMat->alphabetSize - 1, dbr.getDbtype(), par.threads, false, memoryLimit, 1, par.maxResListLen, par.kmerSize, par.split, splitMode);
+        Prefiltering::setupSplit(dbr, seedSubMat->alphabetSize - 1, db1Type, par.threads, false, memoryLimit, 1, par.maxResListLen, par.kmerSize, par.split, splitMode);
         kmerScore = Prefiltering::getKmerThreshold(par.sensitivity, isProfileSearch, contextPseudoCnts, par.kmerScore.values, par.kmerSize);
     }
 
