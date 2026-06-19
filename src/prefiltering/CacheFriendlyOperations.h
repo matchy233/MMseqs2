@@ -100,7 +100,9 @@ private:
     CounterResult *binDataFrame;
 
     struct __attribute__((__packed__)) TmpResult {
-        DBLocalId id;
+        // split-local id (sibling temp buffer of CounterResult); kept 32-bit even in the 64-bit
+        // build so tmpElementBuffer stays compact. Reconstructed to the global key via + dbFrom.
+        unsigned int id;
         unsigned short diagonal;
     };
     // needed to temporary keep ids
