@@ -34,7 +34,11 @@ ClusteringAlgorithms::ClusteringAlgorithms(DBReader<DBKeyType>* seqDbr, DBReader
     this->sourceLen=sourceLen;
     this->needSET=needSET;
     ///time
+#ifdef MMSEQS_INT64_IDS
     this->clustersizes=new int64_t[dbSize];
+#else
+    this->clustersizes=new int32_t[dbSize];
+#endif
     std::fill_n(clustersizes, dbSize, 0);
 }
 

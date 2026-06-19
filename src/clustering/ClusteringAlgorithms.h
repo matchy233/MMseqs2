@@ -28,7 +28,12 @@ private:
 //datastructures
     size_t maxClustersize;
     size_t dbSize;
+    // signed (uses a -1 sentinel); 4 bytes by default, 8 under MMSEQS_INT64_IDS
+#ifdef MMSEQS_INT64_IDS
     int64_t * clustersizes;
+#else
+    int32_t * clustersizes;
+#endif
     DBLocalId* sorted_clustersizes;
     DBLocalId* clusterid_to_arrayposition;   // position in sorted_clustersizes (<= dbSize)
     size_t* borders_of_set;                  // small (maxClustersize+1); kept size_t
