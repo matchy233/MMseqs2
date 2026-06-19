@@ -345,6 +345,25 @@ void Prefiltering::setupSplit(DBReader<DBKeyType>& tdbr, const int alphabetSize,
 #endif
     optimalNumSplits = std::min(sizeOfDbToSplit, optimalNumSplits);
 
+    // Prefilter sequence ids (IndexEntryLocal::seqId / CounterResult::id) are stored split-local in
+    // 32 bits and reconstructed to the global key via + dbFrom. The index is always built over the
+    // TARGET split, so each target chunk must hold < 2^32 sequences. Force enough target splits.
+    // Query-db split keeps the whole target in a single index, so it cannot satisfy this for a
+    // target with >= 2^32 sequences.
+    const size_t maxSeqPerSplit = static_cast<size_t>(UINT_MAX);
+    const size_t targetSize = tdbr.getSize();
+    const size_t minSplitsForId = (targetSize + maxSeqPerSplit - 1) / maxSeqPerSplit; // ceil
+    if (minSplitsForId > 1) {
+        if (splitMode == Parameters::QUERY_DB_SPLIT) {
+            Debug(Debug::ERROR) << "Target database has " << targetSize
+                                << " sequences (>= 2^32). 32-bit prefilter ids require target-db split "
+                                << "mode; query-db split is unsupported at this size.\n";
+            EXIT(EXIT_FAILURE);
+        }
+        minimalNumSplits = std::max(minimalNumSplits, minSplitsForId);
+        optimalNumSplits = std::max(optimalNumSplits, minSplitsForId);
+    }
+
     // set the final number of splits
     if (split == 0) {
         if(optimalNumSplits > INT_MAX){

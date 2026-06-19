@@ -44,7 +44,9 @@
    )
 
 struct __attribute__((__packed__)) CounterResult {
-    DBLocalId id;
+    // split-local id (< 2^32 by construction; reconstructed to the global key via + dbFrom).
+    // Kept 32-bit even in the 64-bit build to avoid inflating the counting bins.
+    unsigned int id;
     unsigned short diagonal;
     unsigned char count;
 

@@ -63,6 +63,14 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup ** extern
     const bool isTargetSimiliarKmerSearch = isProfile || targetSearchMode;
     dbTo = std::min(dbTo, dbr->getSize());
     size_t dbSize = dbTo - dbFrom;
+    // IndexEntryLocal::seqId is stored split-local in 32 bits, so a target split must hold < 2^32
+    // sequences. Prefiltering::setupSplit guarantees this; guard here in case the index is built
+    // through another path.
+    if (dbSize > static_cast<size_t>(UINT_MAX)) {
+        Debug(Debug::ERROR) << "Target split has " << dbSize << " sequences (> 2^32). "
+                            << "The prefilter requires more target splits.\n";
+        EXIT(EXIT_FAILURE);
+    }
     DbInfo* info = new DbInfo(dbFrom, dbTo, seq->getEffectiveKmerSize(), *dbr);
 
     *externalLookup = new SequenceLookup(dbSize, info->aaDbSize);

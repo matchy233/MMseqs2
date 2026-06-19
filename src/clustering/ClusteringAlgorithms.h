@@ -30,8 +30,8 @@ private:
     size_t dbSize;
     int64_t * clustersizes;
     DBLocalId* sorted_clustersizes;
-    size_t* clusterid_to_arrayposition;
-    size_t* borders_of_set;
+    DBLocalId* clusterid_to_arrayposition;   // position in sorted_clustersizes (<= dbSize)
+    size_t* borders_of_set;                  // small (maxClustersize+1); kept size_t
     DBKeyType* keyToSet;
     size_t* sourceOffsets;
     DBKeyType** sourceLookupTable;

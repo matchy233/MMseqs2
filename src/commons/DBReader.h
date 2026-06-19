@@ -544,8 +544,10 @@ private:
     SourceEntry * source;
     bool sortedByOffset;
 
-    size_t * id2local;
-    size_t * local2id;
+    // local indices into this reader's own arrays (0..size); DBLocalId is 32-bit by default and
+    // 64-bit under MMSEQS_INT64_IDS, so this stays 4 bytes/entry in the default build.
+    DBLocalId * id2local;
+    DBLocalId * local2id;
 
     bool dataMapped;
     int accessType;

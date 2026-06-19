@@ -23,7 +23,9 @@
 // IndexEntryLocal is an entry with position and seqId for a kmer
 // structure needs to be packed or it will need 8 bytes instead of 6
 struct __attribute__((__packed__)) IndexEntryLocal {
-    DBKeyType seqId;
+    // split-local id (< 2^32 by construction; reconstructed to the global key via + dbFrom).
+    // Kept 32-bit even in the 64-bit build to avoid inflating the prefilter index.
+    unsigned int seqId;
     unsigned short position_j;
     static bool comapreByIdAndPos(IndexEntryLocal first, IndexEntryLocal second){
         if(first.seqId < second.seqId )
@@ -40,10 +42,10 @@ struct __attribute__((__packed__)) IndexEntryLocal {
 
 struct __attribute__((__packed__)) IndexEntryLocalTmp {
     unsigned int kmer;
-    DBKeyType seqId;
+    unsigned int seqId;
     unsigned short position_j;
 
-    IndexEntryLocalTmp(unsigned int kmer, DBKeyType seqId, unsigned short position_j)
+    IndexEntryLocalTmp(unsigned int kmer, unsigned int seqId, unsigned short position_j)
             :kmer(kmer),seqId(seqId), position_j(position_j)
     {}
 
@@ -321,7 +323,7 @@ public:
                 if (offsets[kmerIdx + 1] - offsets[kmerIdx] == 0)
                     continue;
                 (*buffer)[kmerPos].kmer = kmerIdx;
-                (*buffer)[kmerPos].seqId = s->getId();
+                (*buffer)[kmerPos].seqId = static_cast<unsigned int>(s->getId()); // split-local id
                 (*buffer)[kmerPos].position_j = s->getCurrentPosition();
                 kmerPos++;
             }
@@ -374,7 +376,7 @@ public:
                 continue;
 
             (*buffer)[kmerPos].kmer = kmerIdx;
-            (*buffer)[kmerPos].seqId      = s->getId();
+            (*buffer)[kmerPos].seqId      = static_cast<unsigned int>(s->getId()); // split-local id
             (*buffer)[kmerPos].position_j = s->getCurrentPosition();
             kmerPos++;
             if(kmerPos >= bufferSize){

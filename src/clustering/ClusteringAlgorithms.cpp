@@ -155,7 +155,7 @@ std::pair<DBKeyType, DBKeyType> * ClusteringAlgorithms::execute(int mode) {
 }
 
 void ClusteringAlgorithms::initClustersizes(){
-    size_t * setsize_abundance = new size_t[maxClustersize+1];
+    DBLocalId * setsize_abundance = new DBLocalId[maxClustersize+1];
 
     std::fill_n(setsize_abundance, maxClustersize+1, 0);
     //count how often a set size occurs
@@ -173,7 +173,7 @@ void ClusteringAlgorithms::initClustersizes(){
     Util::checkAllocation(sorted_clustersizes, "Can not allocate sorted_clustersizes memory in ClusteringAlgorithms::initClustersizes");
 
     std::fill_n(sorted_clustersizes, dbSize+1, 0);
-    clusterid_to_arrayposition = new(std::nothrow) size_t[dbSize + 1];
+    clusterid_to_arrayposition = new(std::nothrow) DBLocalId[dbSize + 1];
     Util::checkAllocation(clusterid_to_arrayposition, "Can not allocate sorted_clustersizes memory in ClusteringAlgorithms::initClustersizes");
 
     std::fill_n(clusterid_to_arrayposition, dbSize + 1, 0);
@@ -192,7 +192,7 @@ void ClusteringAlgorithms::initClustersizes(){
 void ClusteringAlgorithms::removeClustersize(DBLocalId clusterid){
     clustersizes[clusterid]=0;
     sorted_clustersizes[clusterid_to_arrayposition[clusterid]] = DB_LOCAL_ID_INVALID;
-    clusterid_to_arrayposition[clusterid]=DB_ENTRY_NOT_FOUND;
+    clusterid_to_arrayposition[clusterid]=DB_LOCAL_ID_INVALID;
 }
 
 void ClusteringAlgorithms::decreaseClustersize(DBLocalId clusterid){

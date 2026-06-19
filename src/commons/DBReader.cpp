@@ -266,9 +266,9 @@ void DBReader<DBKeyType>::sortIndex(float *weights) {
 
     this->accessType=DBReader::SORT_BY_WEIGHTS;
     std::pair<size_t, float> *sortForMapping = new std::pair<size_t, float>[size];
-    id2local = new size_t[size];
-    local2id = new size_t[size];
-    incrementMemory(sizeof(size_t) * 2 * size);
+    id2local = new DBLocalId[size];
+    local2id = new DBLocalId[size];
+    incrementMemory(sizeof(DBLocalId) * 2 * size);
     for (size_t i = 0; i < size; i++) {
         id2local[i] = i;
         local2id[i] = i;
@@ -295,7 +295,8 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
     
     if ((isSortedById == false) && (accessType != HARDNOSORT) && (accessType != SORT_BY_OFFSET)) {
         // create an array of the joint original indeces --> this will be sorted:
-        size_t *sortedIndices = new size_t[size];
+        // permutation of 0..size-1; DBLocalId keeps this 4 bytes/entry in the default build.
+        DBLocalId *sortedIndices = new DBLocalId[size];
         for (size_t i = 0; i < size; ++i) {
             sortedIndices[i] = i;
         }
@@ -347,9 +348,9 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
     if (accessType == SORT_BY_LENGTH) {
         // sort the entries by the length of the sequences
         std::pair<size_t, unsigned int> *sortForMapping = new std::pair<size_t, unsigned int>[size];
-        id2local = new size_t[size];
-        local2id = new size_t[size];
-        incrementMemory(sizeof(size_t) * 2 * size);
+        id2local = new DBLocalId[size];
+        local2id = new DBLocalId[size];
+        incrementMemory(sizeof(DBLocalId) * 2 * size);
         for (size_t i = 0; i < size; i++) {
             id2local[i] = i;
             local2id[i] = i;
@@ -371,9 +372,9 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
         std::mt19937 rnd(0);
         std::shuffle(tmpIndex, tmpIndex + size, rnd);
 
-        id2local = new size_t[size];
-        local2id = new size_t[size];
-        incrementMemory(sizeof(size_t) * 2 * size);
+        id2local = new DBLocalId[size];
+        local2id = new DBLocalId[size];
+        incrementMemory(sizeof(DBLocalId) * 2 * size);
 
         for (size_t i = 0; i < size; i++) {
             id2local[tmpIndex[i]] = i;
@@ -396,9 +397,9 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
 
         // sort the entries by the offset of the sequences
         std::pair<size_t, size_t> *sortForMapping = new std::pair<size_t, size_t>[size];
-        id2local = new size_t[size];
-        local2id = new size_t[size];
-        incrementMemory(sizeof(size_t) * 2 * size);
+        id2local = new DBLocalId[size];
+        local2id = new DBLocalId[size];
+        incrementMemory(sizeof(DBLocalId) * 2 * size);
 
         for (size_t i = 0; i < size; i++) {
             id2local[i] = i;
@@ -414,9 +415,9 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
     } else if (accessType == SORT_BY_ID_OFFSET) {
         // sort the entries by the offset of the sequences
         std::pair<size_t, Index> *sortForMapping = new std::pair<size_t, Index>[size];
-        id2local = new size_t[size];
-        local2id = new size_t[size];
-        incrementMemory(sizeof(size_t) * 2 * size);
+        id2local = new DBLocalId[size];
+        local2id = new DBLocalId[size];
+        incrementMemory(sizeof(DBLocalId) * 2 * size);
 
         for (size_t i = 0; i < size; i++) {
             id2local[i] = i;
@@ -431,9 +432,9 @@ void DBReader<DBKeyType>::sortIndex(bool isSortedById) {
         delete[] sortForMapping;
     } else if (accessType == SORT_BY_LINE) {
         // sort the entries by the original line number in the index file
-        id2local = new size_t[size];
-        local2id = new size_t[size];
-        incrementMemory(sizeof(size_t) * 2 * size);
+        id2local = new DBLocalId[size];
+        local2id = new DBLocalId[size];
+        incrementMemory(sizeof(DBLocalId) * 2 * size);
 
         for (size_t i = 0; i < size; i++) {
             id2local[i] = mappingToOriginalIndex[i];

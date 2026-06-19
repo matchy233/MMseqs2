@@ -241,9 +241,10 @@ void AlignmentSymmetry::readInDataSet(DBReader<DBKeyType>*alnDbr, DBReader<DBKey
 
 size_t AlignmentSymmetry::findMissingLinks(DBLocalId ** elementLookupTable, size_t * offsetTable, size_t dbSize, int threads) {
     // init memory for parallel merge
-    size_t * tmpSize = new(std::nothrow) size_t[static_cast<size_t>(threads) * dbSize];
+    // per-element link counts (<= dbSize); DBLocalId keeps this 4 bytes/entry in the default build.
+    DBLocalId * tmpSize = new(std::nothrow) DBLocalId[static_cast<size_t>(threads) * dbSize];
     Util::checkAllocation(tmpSize, "Can not allocate memory in findMissingLinks");
-    memset(tmpSize, 0, static_cast<size_t>(threads) * dbSize * sizeof(size_t));
+    memset(tmpSize, 0, static_cast<size_t>(threads) * dbSize * sizeof(DBLocalId));
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
