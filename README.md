@@ -24,7 +24,9 @@ Keep posted about MMseqs2 updates by following [Martin](https://bsky.app/profile
 
 ## Installation
 MMseqs2 can be used by [compiling from source](https://github.com/soedinglab/MMseqs2/wiki#installation), downloading a statically compiled binary at [mmseqs.com/latest](https://mmseqs.com/latest), using [Homebrew](https://github.com/Homebrew/brew), [conda](https://github.com/conda-forge/miniforge) or [Docker](https://github.com/moby/moby).
-     
+
+When compiling from source, pass `-DMMSEQS_INT64_IDS=1` to CMake to build MMseqs2 with 64-bit internal sequence/database IDs instead of the default 32-bit IDs.
+
     # install by brew
     brew install mmseqs2
     # install via conda

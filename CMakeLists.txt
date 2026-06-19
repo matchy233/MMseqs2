@@ -21,6 +21,7 @@ set(USE_SYSTEM_ZSTD 0 CACHE BOOL "Use zstd provided by system instead of bundled
 set(IGNORE_RUST_VERSION 0 CACHE BOOL "Ignore Rust version check")
 set(ENABLE_CUDA 0 CACHE BOOL "Enable CUDA")
 set(FORCE_STATIC_DEPS 0 CACHE BOOL "Force static linking of deps")
+set(MMSEQS_INT64_IDS 0 CACHE BOOL "Use 64-bit internal sequence/database IDs")
 
 if(FORCE_STATIC_DEPS)
     if(ENABLE_CUDA)
@@ -189,6 +190,10 @@ if (PPC64 OR SPARC OR ZARCH)
 endif ()
 
 set(MMSEQS_C_FLAGS "${MMSEQS_CXX_FLAGS}")
+if (MMSEQS_INT64_IDS)
+    set(MMSEQS_C_FLAGS "${MMSEQS_C_FLAGS} -DMMSEQS_INT64_IDS=1")
+    set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -DMMSEQS_INT64_IDS=1")
+endif ()
 set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -std=c++1y")
 # Compiler-specific features
 # if (CMAKE_COMPILER_IS_CLANG AND (NOT EMSCRIPTEN))

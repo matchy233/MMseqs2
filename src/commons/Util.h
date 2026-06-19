@@ -9,6 +9,7 @@
 #include <map>
 #include <cstdint>
 #include "MMseqsMPI.h"
+#include "IndexTypes.h"
 
 #ifndef EXIT
 #define EXIT(exitCode) do { int __status = (exitCode); std::cerr.flush(); std::cout.flush(); exit(__status); } while(0)
@@ -102,6 +103,7 @@ public:
     static size_t ompCountLines(const char *data, size_t length, unsigned int threads);
 
     static int readMapping(std::string mappingFilename, std::vector<std::pair<unsigned int, unsigned int> > & mapping);
+    static int readMappingDBKey(std::string mappingFilename, std::vector<std::pair<DBKeyType, DBKeyType> > & mapping);
 
     template<typename T>
     static inline T fast_atoi( const char * str )
@@ -355,8 +357,8 @@ public:
 
     static std::string removeWhiteSpace(std::string in);
 
-    static std::map<unsigned int, std::string> readLookup(const std::string& lookupFile,
-                                                          const unsigned char removeSplit = 0);
+    static std::map<DBKeyType, std::string> readLookup(const std::string& lookupFile,
+                                                       const unsigned char removeSplit = 0);
 
     static bool canBeCovered(const float covThr, const int covMode, float queryLength, float targetLength);
 

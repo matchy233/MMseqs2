@@ -57,7 +57,7 @@ KmerPosition<T, includeAdjacency, IncludeSeqLen> *initKmerPositionMemory(size_t 
 
 
 template <int TYPE, typename T, bool includeAdjacency, bool IncludeSeqLen>
-std::pair<size_t, size_t> fillKmerPositionArray(KmerPosition<T, includeAdjacency, IncludeSeqLen> * kmerArray, size_t kmerArraySize, DBReader<unsigned int> &seqDbr,
+std::pair<size_t, size_t> fillKmerPositionArray(KmerPosition<T, includeAdjacency, IncludeSeqLen> * kmerArray, size_t kmerArraySize, DBReader<DBKeyType> &seqDbr,
                                                 Parameters & par, BaseMatrix * subMat, bool hashWholeSequence,
                                                 size_t hashStartRange, size_t hashEndRange, size_t * hashDistribution){
     size_t offset = 0;
@@ -124,7 +124,7 @@ std::pair<size_t, size_t> fillKmerPositionArray(KmerPosition<T, includeAdjacency
                     masker->maskSequence(seq, par.maskMode,  par.maskProb, par.maskLowerCaseMode, par.maskNrepeats);
                 }
                 size_t seqKmerCount = 0;
-                unsigned int seqId = seq.getDbKey();
+                DBKeyType seqId = seq.getDbKey();
                 while (seq.hasNextKmer()) {
                     unsigned char *kmer = (unsigned char*) seq.nextKmer();
                     if(seq.kmerContainsX()){
@@ -780,7 +780,7 @@ static void runIteration(
     size_t hashEndRange, const std::string &splitFile,
     KmerPosition<T, includeAdjacency, IncludeSeqLen> *hashSeqPair,
     KmerPosition<T, false, IncludeSeqLen> *writeSeqPair,
-    DBReader<unsigned int> &seqDbr, Parameters &par,
+    DBReader<DBKeyType> &seqDbr, Parameters &par,
     BaseMatrix *subMat, short *countTable,
     SequenceWeights *sequenceWeights,
     std::vector<size_t> &threadOffsets, Timer &timer) {
@@ -891,7 +891,7 @@ template <typename T, bool includeAdjacency, bool IncludeSeqLen>
 KmerPosition<T, includeAdjacency, IncludeSeqLen> *doComputation(
     size_t totalKmers, size_t hashStartRange, size_t hashEndRange,
     const std::string &splitFile, AssignGroupMask assignGroupMask,
-    ComputationPhase phase, DBReader<unsigned int> &seqDbr,
+    ComputationPhase phase, DBReader<DBKeyType> &seqDbr,
     Parameters &par, BaseMatrix *subMat, short *countTable) {
 
     KmerPosition<T, includeAdjacency, IncludeSeqLen> *hashSeqPair =
@@ -1076,7 +1076,7 @@ void setLinearFilterDefault(Parameters *p) {
 }
 
 
-size_t computeKmerCount(DBReader<unsigned int> &reader, size_t KMER_SIZE, size_t chooseTopKmer, float chooseTopKmerScale) {
+size_t computeKmerCount(DBReader<DBKeyType> &reader, size_t KMER_SIZE, size_t chooseTopKmer, float chooseTopKmerScale) {
     size_t totalKmers = 0;
     for(size_t id = 0; id < reader.getSize(); id++ ){
         int seqLen = static_cast<int>(reader.getSeqLen(id));
@@ -1095,7 +1095,7 @@ template <typename T, bool includeAdjacency, bool IncludeSeqLen>
 std::vector<std::pair<size_t, size_t>> setupCountTable(
     Parameters &par,
     BaseMatrix *subMat,
-    DBReader<unsigned int> &seqDbr,
+    DBReader<DBKeyType> &seqDbr,
     size_t splits,
     size_t totalKmersPerSplit,
     size_t totalKmersCountTable
@@ -1155,7 +1155,7 @@ std::vector<std::pair<size_t, size_t>> setupCountTable(
 
 
 template <typename T, bool includeAdjacency, bool IncludeSeqLen>
-int kmermatcherInner(Parameters& par, DBReader<unsigned int>& seqDbr) {
+int kmermatcherInner(Parameters& par, DBReader<DBKeyType>& seqDbr) {
     int querySeqType = seqDbr.getDbtype();
     size_t dbKeySize = seqDbr.getLastKey() +1 ;
     BaseMatrix *subMat;
@@ -1195,7 +1195,7 @@ int kmermatcherInner(Parameters& par, DBReader<unsigned int>& seqDbr) {
         {
 #pragma omp for schedule(dynamic, 1000)
             for (size_t id = 0; id < seqDbr.getSize(); id++) {
-                unsigned int seqKey = seqDbr.getDbKey(id);
+                DBKeyType seqKey = seqDbr.getDbKey(id);
                 seqkey_to_len[seqKey] = static_cast<T>(seqDbr.getSeqLen(id));
             }
         }
@@ -1365,7 +1365,7 @@ int kmermatcherInner(Parameters& par, DBReader<unsigned int>& seqDbr) {
 #pragma omp for
             for (size_t id = 0; id < seqDbr.getSize(); id++) {
                 char buffer[100];
-                unsigned int dbKey = seqDbr.getDbKey(id);
+                DBKeyType dbKey = seqDbr.getDbKey(id);
                 if (repSequence[dbKey] == false) {
                     hit_t h;
                     h.prefScore = 0;
@@ -1387,7 +1387,7 @@ int kmermatcherInner(Parameters& par, DBReader<unsigned int>& seqDbr) {
 }
 
 template <typename T, bool includeAdjacency, bool IncludeSeqLen>
-std::vector<std::pair<size_t, size_t>> setupKmerSplits(Parameters &par, BaseMatrix * subMat, DBReader<unsigned int> &seqDbr, size_t totalKmers, size_t splits){
+std::vector<std::pair<size_t, size_t>> setupKmerSplits(Parameters &par, BaseMatrix * subMat, DBReader<DBKeyType> &seqDbr, size_t totalKmers, size_t splits){
     std::vector<std::pair<size_t, size_t>> hashRanges;
     if (splits > 1) {
         Debug(Debug::INFO) << "Not enough memory to process at once need to split\n";
@@ -1434,9 +1434,9 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     setLinearFilterDefault(&par);
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_CLUSTLINEAR);
 
-    DBReader<unsigned int> seqDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads,
-                                  DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
-    seqDbr.open(DBReader<unsigned int>::NOSORT);
+    DBReader<DBKeyType> seqDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads,
+                                  DBReader<DBKeyType>::USE_INDEX | DBReader<DBKeyType>::USE_DATA);
+    seqDbr.open(DBReader<DBKeyType>::NOSORT);
     int querySeqType = seqDbr.getDbtype();
 
     setKmerLengthAndAlphabet(par, seqDbr.getAminoAcidDBSize(), querySeqType);
@@ -1554,7 +1554,7 @@ void writeKmerMatcherResult(DBWriter & dbw,
                 int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
                 prefResultsOutString.append(buffer, len);
             }
-            unsigned int targetId = hashSeqPair[kmerPos].id;
+            DBKeyType targetId = hashSeqPair[kmerPos].id;
             T diagonal = hashSeqPair[kmerPos].pos;
             size_t kmerOffset = 0;
             T prevDiagonal = diagonal;
@@ -1613,9 +1613,9 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
     if(offsetPos + 1 >= entrySize){
         return offsetPos;
     }
-    unsigned int repSeqId = entries[offsetPos].seqId;
+    DBKeyType repSeqId = entries[offsetPos].seqId;
     size_t pos = 0;
-    while(entries[offsetPos + pos].seqId != UINT_MAX){
+    while(entries[offsetPos + pos].seqId != DB_KEY_INVALID){
         if(TYPE == Parameters::DBTYPE_NUCLEOTIDES){
             queue.push(FileKmerPosition(repSeqId, entries[offsetPos+pos].seqId, entries[offsetPos+pos].diagonal, entries[offsetPos+pos].score, entries[offsetPos+pos].getRev(), file));
         }else{
@@ -1623,7 +1623,7 @@ size_t queueNextEntry(KmerPositionQueue &queue, int file, size_t offsetPos, T *e
         }
         pos++;
     }
-    queue.push(FileKmerPosition(repSeqId, UINT_MAX, 0, 0, file));
+    queue.push(FileKmerPosition(repSeqId, DB_KEY_INVALID, 0, 0, file));
     pos++;
     return offsetPos+pos;
 }
@@ -1693,7 +1693,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
         char buffer[1024];
         FileKmerPosition res;
         bool hasRepSeq = (repSequence.size() > 0);
-        unsigned int currRepSeq = UINT_MAX;
+        DBKeyType currRepSeq = DB_KEY_INVALID;
 
         if (queue.empty() == false) {
             res = queue.top();
@@ -1712,7 +1712,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
             res = queue.top();
             queue.pop();
 
-            if (res.id == UINT_MAX) {
+            if (res.id == DB_KEY_INVALID) {
                 offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
                                                               entries[res.file], entrySizes[res.file]);
                 
@@ -1723,7 +1723,7 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                 }
                 prefResultsOutString.clear();
 
-                while (queue.empty() == false && queue.top().id == UINT_MAX) {
+                while (queue.empty() == false && queue.top().id == DB_KEY_INVALID) {
                     res = queue.top();
                     queue.pop();
                     offsetPos[res.file] = queueNextEntry<TYPE, T>(queue, res.file, offsetPos[res.file],
@@ -1754,8 +1754,8 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
             int bestRevertMask  = 0;
             short bestDiagonal  = res.pos;
             int topScore        = 0;
-            unsigned int hitId;
-            unsigned int prevHitId;
+            DBKeyType hitId;
+            DBKeyType prevHitId;
             int diagonalScore   = 0;
             short prevDiagonal  = res.pos;
 
@@ -1780,9 +1780,9 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
                         queue.push(res);
                     }
                 } else {
-                    hitId = UINT_MAX;
+                    hitId = DB_KEY_INVALID;
                 }
-            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != UINT_MAX);
+            } while (hitId == prevHitId && res.repSeq == currRepSeq && hitId != DB_KEY_INVALID);
 
             hit_t h;
             h.seqId     = prevHitId;
@@ -1857,7 +1857,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition<seqLenType, includeAdjac
 
             T writeBuffer[BUFFER_SIZE];
             T nullEntry;
-            nullEntry.seqId = UINT_MAX;
+            nullEntry.seqId = DB_KEY_INVALID;
             nullEntry.diagonal = 0;
 
             for (size_t kmerPos = startIdx; kmerPos < endIdx && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++) {
@@ -1887,7 +1887,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition<seqLenType, includeAdjac
                     bufferPos++;
                 }
 
-                unsigned int targetId = hashSeqPair[kmerPos].id;
+                DBKeyType targetId = hashSeqPair[kmerPos].id;
                 seqLenType diagonal = hashSeqPair[kmerPos].pos;
                 int forward = 0;
                 int reverse = 0;
@@ -1980,23 +1980,23 @@ void setKmerLengthAndAlphabet(Parameters &parameters, size_t aaDbSize, int seqTy
 }
 
 // Existing explicit instantiations (IncludeSeqLen defaults to false)
-template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, true>(KmerPosition<short, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, false>(KmerPosition<short, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, true>(KmerPosition<short, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, false>(KmerPosition<short, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, true>(KmerPosition<short, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, false>(KmerPosition<short, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<0, int, true>(KmerPosition<int, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<0, int, false>(KmerPosition<int, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<1, int, true>(KmerPosition<int, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<1, int, false>(KmerPosition<int, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<2, int, true>(KmerPosition<int, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<2, int, false>(KmerPosition<int, false> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, true>(KmerPosition<short, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, false>(KmerPosition<short, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, true>(KmerPosition<short, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, false>(KmerPosition<short, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, true>(KmerPosition<short, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, false>(KmerPosition<short, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<0, int, true>(KmerPosition<int, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<0, int, false>(KmerPosition<int, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<1, int, true>(KmerPosition<int, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<1, int, false>(KmerPosition<int, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<2, int, true>(KmerPosition<int, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<2, int, false>(KmerPosition<int, false> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
 
 // Linsearch explicit instantiations (IncludeSeqLen=true)
-template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
-template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<unsigned int> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<0, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<1, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
+template std::pair<size_t, size_t>  fillKmerPositionArray<2, short, false, true>(KmerPosition<short, false, true> *, size_t, DBReader<DBKeyType> &, Parameters &, BaseMatrix *, bool, size_t, size_t, size_t *);
 
 template KmerPosition<short, true> *initKmerPositionMemory(size_t size);
 template KmerPosition<short, false> *initKmerPositionMemory(size_t size);
@@ -2010,11 +2010,11 @@ template size_t computeMemoryNeededLinearfilter<int, true>(size_t totalKmer);
 template size_t computeMemoryNeededLinearfilter<int, false>(size_t totalKmer);
 template size_t computeMemoryNeededLinearfilter<short, false, true>(size_t totalKmer);
 
-template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, true>(Parameters &, BaseMatrix *, DBReader<unsigned int> &, size_t, size_t);
-template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, false>(Parameters &, BaseMatrix *, DBReader<unsigned int> &, size_t, size_t);
-template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<int, true>(Parameters &, BaseMatrix *, DBReader<unsigned int> &, size_t, size_t);
-template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<int, false>(Parameters &, BaseMatrix *, DBReader<unsigned int> &, size_t, size_t);
-template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, false, true>(Parameters &, BaseMatrix *, DBReader<unsigned int> &, size_t, size_t);
+template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, true>(Parameters &, BaseMatrix *, DBReader<DBKeyType> &, size_t, size_t);
+template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, false>(Parameters &, BaseMatrix *, DBReader<DBKeyType> &, size_t, size_t);
+template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<int, true>(Parameters &, BaseMatrix *, DBReader<DBKeyType> &, size_t, size_t);
+template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<int, false>(Parameters &, BaseMatrix *, DBReader<DBKeyType> &, size_t, size_t);
+template std::vector<std::pair<size_t, size_t>>  setupKmerSplits<short, false, true>(Parameters &, BaseMatrix *, DBReader<DBKeyType> &, size_t, size_t);
 
 template void writeKmersToDisk<Parameters::DBTYPE_NUCLEOTIDES, KmerEntryRev, short, true>(std::string, KmerPosition<short, true> *, size_t, int, std::vector<size_t> *, int);
 template void writeKmersToDisk<Parameters::DBTYPE_NUCLEOTIDES, KmerEntryRev, int, true>(std::string, KmerPosition<int, true> *, size_t, int, std::vector<size_t> *, int);

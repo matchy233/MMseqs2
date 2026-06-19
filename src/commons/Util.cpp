@@ -56,6 +56,34 @@ int Util::readMapping(std::string mappingFilename, std::vector<std::pair<unsigne
     return isSorted;
 }
 
+int Util::readMappingDBKey(std::string mappingFilename, std::vector<std::pair<DBKeyType, DBKeyType>> & mapping){
+    MemoryMapped indexData(mappingFilename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    if (!indexData.isValid()){
+        Debug(Debug::ERROR) << "Could not open index file " << mappingFilename << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+
+    size_t currPos = 0;
+    char* indexDataChar = (char *) indexData.getData();
+    const char* cols[3];
+    size_t isSorted = true;
+    DBKeyType prevId=0;
+    while (currPos < indexData.size()){
+        Util::getWordsOfLine(indexDataChar, cols, 2 );
+        DBKeyType id = Util::fast_atoi<DBKeyType>(cols[0]);
+        isSorted *= (id >= prevId);
+        DBKeyType taxid = Util::fast_atoi<DBKeyType>(cols[1]);
+        indexDataChar = Util::skipLine(indexDataChar);
+        mapping.push_back(std::make_pair(id, taxid));
+        currPos = indexDataChar - (char *) indexData.getData();
+
+        prevId = id;
+    }
+    indexData.close();
+
+    return isSorted;
+}
+
 size_t Util::countLines(const char *data, size_t length) {
     size_t newlines = 0;
     for (size_t i = 0; i < length; i++ ) {
@@ -439,8 +467,8 @@ int Util::omp_thread_count() {
     n += 1;
     return n;
 }
-std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const unsigned char removeSplit) {
-    std::map<unsigned int, std::string> mapping;
+std::map<DBKeyType, std::string> Util::readLookup(const std::string& file, const unsigned char removeSplit) {
+    std::map<DBKeyType, std::string> mapping;
     if (file.length() > 0) {
         std::ifstream mappingStream(file);
         if (mappingStream.fail()) {
@@ -451,7 +479,7 @@ std::map<unsigned int, std::string> Util::readLookup(const std::string& file, co
         std::string line;
         while (std::getline(mappingStream, line)) {
             std::vector<std::string> split = Util::split(line, "\t");
-            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
+            DBKeyType id = Util::fast_atoi<DBKeyType>(split[0].c_str());
 
             std::string& name = split[1];
 

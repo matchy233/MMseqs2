@@ -7,6 +7,7 @@
 
 #include "MathUtil.h"
 #include "BaseMatrix.h"
+#include "IndexTypes.h"
 #include "Parameters.h"
 #include "ScoreMatrix.h"
 
@@ -82,10 +83,10 @@ public:
     ~Sequence();
 
     // Map char -> int
-    void mapSequence(size_t id, unsigned int dbKey, const char *seq, unsigned int seqLen);
+    void mapSequence(size_t id, DBKeyType dbKey, const char *seq, unsigned int seqLen);
 
     // map sequence from SequenceLookup
-    void mapSequence(size_t id, unsigned int dbKey, std::pair<const unsigned char *, const unsigned int> data);
+    void mapSequence(size_t id, DBKeyType dbKey, std::pair<const unsigned char *, const unsigned int> data);
 
     // map profile HMM, *data points to start position of Profile
     void mapProfile(const char *profileData, unsigned int seqLen);
@@ -416,11 +417,11 @@ public:
     static void extractProfileSequence(const char* data, size_t dataSize, const BaseMatrix &submat, std::string &result);
     static void extractProfileConsensus(const char* data, size_t dataSize, const BaseMatrix &submat, std::string &result);
 
-    int getId() const { return id; }
+    size_t getId() const { return id; }
 
     int getCurrentPosition() { return currItPos; }
 
-    unsigned int getDbKey() { return dbKey; }
+    DBKeyType getDbKey() { return dbKey; }
 
     int getSeqType() { return seqType; }
 
@@ -561,7 +562,7 @@ private:
     bool kmerWindowContainsX() const;
 
     size_t id;
-    unsigned int dbKey;
+    DBKeyType dbKey;
     const char *seqData;
 
     // current iterator position
