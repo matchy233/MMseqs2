@@ -159,7 +159,6 @@ std::pair<ssize_t,ssize_t> Util::getFastaHeaderPosition(const std::string& heade
     };
 
     const struct Databases databases[] = {
-            { "uc",   2, 0}, // Uniclust
             { "cl|",   3, 1},
             { "sp|",   3, 1}, // Swiss prot
             { "tr|",   3, 1}, // trembl
@@ -174,7 +173,7 @@ std::pair<ssize_t,ssize_t> Util::getFastaHeaderPosition(const std::string& heade
             { "pat|",  4, 2}, // Patents
             { "gi|",   3, 3}  // NCBI GI
     };
-    const unsigned int database_count = 14;
+    const unsigned int database_count = 13;
 
     for (size_t i = 0; i < database_count; ++i) {
         if (Util::startWith(databases[i].prefix, header, offset)) {

@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <regex.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "blosum62.out.h"
 #include "PAM30.out.h"
@@ -1549,6 +1550,7 @@ Parameters::Parameters():
 
     mapworkflow = combineList(prefilter, rescorediagonal);
     mapworkflow = combineList(mapworkflow, extractorfs);
+    mapworkflow.push_back(&PARAM_SEARCH_TYPE);
     mapworkflow.push_back(&PARAM_START_SENS);
     mapworkflow.push_back(&PARAM_SENS_STEPS);
     mapworkflow.push_back(&PARAM_RUNNER);
@@ -2494,8 +2496,19 @@ void Parameters::setDefaults() {
     if (threadEnv != NULL) {
         threads = (int) Util::fast_atoi<unsigned int>(threadEnv);
     } else {
+        // respect the CPU affinity mask (taskset, cgroup/SLURM allocation) so we
+        // don't default to every online core when only a subset is available (issue #925)
+        #if defined(__linux__) && defined(CPU_COUNT)
+            cpu_set_t cpuMask;
+            CPU_ZERO(&cpuMask);
+            if (sched_getaffinity(0, sizeof(cpuMask), &cpuMask) == 0) {
+                threads = CPU_COUNT(&cpuMask);
+            }
+        #endif
         #ifdef _SC_NPROCESSORS_ONLN
-            threads = sysconf(_SC_NPROCESSORS_ONLN);
+            if (threads <= 1) {
+                threads = sysconf(_SC_NPROCESSORS_ONLN);
+            }
         #endif
         if(threads <= 1){
             threads = Util::omp_thread_count();

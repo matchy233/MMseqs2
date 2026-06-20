@@ -142,6 +142,12 @@ int makepaddedseqdb(int argc, const char **argv, const Command &command) {
             EXIT(EXIT_FAILURE);
         }
         readerHeader.close();
+        // carry over the .source file so that the tset/source column in
+        // convertalignments keeps working on the padded GPU database (issue #960)
+        std::string sourceFile = par.db1 + ".source";
+        if (FileUtil::fileExists(sourceFile.c_str())) {
+            FileUtil::copyFile(sourceFile, par.db2 + ".source");
+        }
     }
     dbr.close();
     return EXIT_SUCCESS;

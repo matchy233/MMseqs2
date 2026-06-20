@@ -67,7 +67,14 @@ int translatenucs(int argc, const char **argv, const Command& command) {
             // ignore null char at the end
             // needs to be int in order to be able to check
             size_t length = reader.getEntryLen(i) - 1;
-            if ((data[length] != '\n' && length % 3 != 0) && (data[length - 1] == '\n' && (length - 1) % 3 != 0)) {
+            // Only inspect bytes inside this entry. data[length] points one byte
+            // past the entry and is not guaranteed to be mapped: for the last entry
+            // of a file whose size is a multiple of the page size, reading it
+            // segfaults (issue #1107). Strip a trailing newline from the length.
+            if (length > 0 && data[length - 1] == '\n') {
+                length -= 1;
+            }
+            if (length % 3 != 0) {
                 Debug(Debug::WARNING) << "Nucleotide sequence entry " << key << " length (" << length << ") is not divisible by three. Adjust length to (length=" <<  length - (length % 3) << ").\n";
                 length = length - (length % 3);
             }

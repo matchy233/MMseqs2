@@ -207,7 +207,11 @@ size_t CacheFriendlyOperations<BINSIZE>::findDuplicates(CounterResult *output, s
             duplicateBitArray[hashBinElement] = currDiagonal;
         }
         // check for overflow
-        if (doubleElementCount + std::min(elementCount, currBinSize/2) >= outputSize) {
+        // the extract loops below write up to elementCount entries into output,
+        // so the previous std::min(elementCount, currBinSize/2) bound underestimated
+        // the space needed when more than half a bin collides on the same diagonal
+        // (e.g. conserved framework k-mers), overflowing output -> see issue #1092
+        if (doubleElementCount + elementCount >= outputSize) {
             return doubleElementCount;
         }
         // set memory to zero

@@ -609,9 +609,9 @@ int createdb(int argc, const char **argv, const Command& command) {
                     if (e.newlineCount == 0) {
                         Debug(Debug::WARNING) << "Fasta entry " << numEntriesInCurrFile << " has no newline character\n";
                     } else if (e.newlineCount > 1) {
-                        Debug(Debug::WARNING) << "Multiline fasta can not be combined with --createdb-mode 0\n";
+                        Debug(Debug::WARNING) << "Multiline fasta can not be combined with --createdb-mode 1\n";
                     }
-                    Debug(Debug::WARNING) << "We recompute with --createdb-mode 1\n";
+                    Debug(Debug::WARNING) << "We recompute with --createdb-mode 0\n";
                     par.createdbMode = Parameters::SEQUENCE_SPLIT_MODE_HARD;
                     progress.reset(SIZE_MAX);
                     hdrWriter.close();
