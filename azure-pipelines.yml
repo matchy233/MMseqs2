@@ -135,6 +135,41 @@ jobs:
           targetPath: $(Build.SourcesDirectory)/build/src/mmseqs
           artifactName: mmseqs-linux-$(SIMD)
 
+  - job: build_ubuntu_int64
+    displayName: Ubuntu MMseqs2 64-bit IDs
+    pool:
+      vmImage: 'Ubuntu-22.04'
+    timeoutInMinutes: 120
+    steps:
+      - checkout: self
+        submodules: true
+      - script: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-11 g++-11 libgcc-11-dev rustc cargo build-essential
+        retryCountOnTaskFailure: "2"
+        displayName: Install newer G++
+      - script: |
+          mkdir build && cd build
+          export CC=gcc-11 ; export CXX=g++-11
+          LIBGOMP=/usr/lib/gcc/x86_64-linux-gnu/11
+          # NOTE: -DENABLE_WERROR is intentionally omitted; the 64-bit-ID build has
+          # not yet been vetted warning-clean under -Werror. Add it once it is.
+          cmake -DCMAKE_BUILD_TYPE=Release -DFORCE_STATIC_DEPS=1 -DHAVE_TESTS=1 \
+            -DMMSEQS_INT64_IDS=1 \
+            -DOpenMP_C_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_C_LIB_NAMES=gomp -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGOMP}" -DOpenMP_CXX_LIB_NAMES=gomp -DOpenMP_gomp_LIBRARY=${LIBGOMP}/libgomp.a \
+            -DHAVE_AVX2=1 -DHAVE_MPI=0 ..
+          make -j $(nproc --all) VERBOSE=1
+        displayName: Build MMseqs2 (64-bit IDs)
+      - script: |
+          export TTY=0
+          ${BUILD_SOURCESDIRECTORY}/util/regression/run_regression.sh ${BUILD_SOURCESDIRECTORY}/build/src/mmseqs ${BUILD_SOURCESDIRECTORY}/regression
+        displayName: Run Regression Suite
+        condition: eq(variables['regression'], 1)
+      - task: PublishPipelineArtifact@0
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/build/src/mmseqs
+          artifactName: mmseqs-linux-avx2-64bit
+
   - job: build_ubuntu_gpu
     displayName: Ubuntu MMseqs2 GPU
     pool:
