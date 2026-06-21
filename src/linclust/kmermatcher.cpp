@@ -1669,11 +1669,8 @@ void mergeKmerFilesAndOutput(DBWriter &dbw,
 
             if (fstat(fileno(files[file]), &sb) == 0 && sb.st_size > 0) {
                 entries[file] = (T *)FileUtil::mmapFile(files[file], &dataSize);
-#if HAVE_POSIX_MADVISE
-                if (posix_madvise(entries[file], dataSize, POSIX_MADV_SEQUENTIAL) != 0) {
-                    Debug(Debug::ERROR) << "posix_madvise returned an error for file " << threadedFiles[threadIdx][file] << "\n";
-                }
-#endif
+                Util::madviseLogged(entries[file], dataSize, POSIX_MADV_SEQUENTIAL,
+                                    threadedFiles[threadIdx][file].c_str());
             } else {
                 entries[file] = nullptr;
                 dataSize = 0;

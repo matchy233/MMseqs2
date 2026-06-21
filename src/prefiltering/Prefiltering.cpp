@@ -453,11 +453,8 @@ void Prefiltering::mergeTargetSplits(const std::string &outDB, const std::string
     for (size_t i = 0; i < splits; ++i) {
         files[i] = FileUtil::openFileOrDie(fileNames[i].first.c_str(), "r", true);
         dataFile[i] = static_cast<char*>(FileUtil::mmapFile(files[i], &dataFileSize[i]));
-#ifdef HAVE_POSIX_MADVISE
-        if (dataFileSize[i] > 0 && posix_madvise (dataFile[i], dataFileSize[i], POSIX_MADV_SEQUENTIAL) != 0){
-            Debug(Debug::ERROR) << "posix_madvise returned an error " << fileNames[i].first << "\n";
-        }
-#endif
+        Util::madviseLogged(dataFile[i], dataFileSize[i], POSIX_MADV_SEQUENTIAL,
+                            fileNames[i].first.c_str());
 
     }
     Debug(Debug::INFO) << "Preparing offsets for merging: " << timer.lap() << "\n";

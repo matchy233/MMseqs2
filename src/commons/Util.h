@@ -98,6 +98,28 @@ public:
 
     static char touchMemory(const char* memory, size_t size);
 
+    // Wrap posix_madvise with errno-aware logging. Returns posix_madvise's
+    // return value (errno-valued, 0 on success). Severity is WARNING for
+    // benign cases (advisory SEQUENTIAL hint failures, or EINVAL on
+    // WILLNEED — typically tail-page alignment on large-page kernels or
+    // VMA types that reject the advice) and ERROR for real failures
+    // (EIO/EBADF/ENOMEM on WILLNEED). A no-op when len == 0 or
+    // HAVE_POSIX_MADVISE is undefined. `context` annotates the log line.
+    //
+    // Fallback POSIX_MADV_* constants so call sites compile even on
+    // platforms without posix_madvise; madviseLogged is a no-op there,
+    // so the literal values are unused.
+#ifndef HAVE_POSIX_MADVISE
+#  ifndef POSIX_MADV_NORMAL
+#    define POSIX_MADV_NORMAL     0
+#    define POSIX_MADV_RANDOM     1
+#    define POSIX_MADV_SEQUENTIAL 2
+#    define POSIX_MADV_WILLNEED   3
+#    define POSIX_MADV_DONTNEED   4
+#  endif
+#endif
+    static int madviseLogged(void* addr, size_t len, int advice, const char* context);
+
     static size_t countLines(const char *data, size_t length);
 
     static size_t ompCountLines(const char *data, size_t length, unsigned int threads);
