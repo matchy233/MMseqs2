@@ -86,7 +86,11 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
             if (waitTimeout == 0) {
                 Debug(Debug::ERROR) 
                     << "gpuserver for database " << par.db2 << " not found.\n"
+                    #ifdef HAVE_HIP
+                    << "Please start gpuserver with the same HIP_VISIBLE_DEVICES\n";
+                    #else
                     << "Please start gpuserver with the same CUDA_VISIBLE_DEVICES\n";
+                    #endif
                 EXIT(EXIT_FAILURE);
             }
 
@@ -102,7 +106,11 @@ void runFilterOnGpu(Parameters & par, BaseMatrix * subMat,
                 if (elapsed >= waitTimeout) {
                     Debug(Debug::ERROR)
                         << "\ngpuserver for database " << par.db2 << " not found after " << elapsed <<  "seconds.\n"
+                        #ifdef HAVE_HIP
+                        << "Please start gpuserver with the same HIP_VISIBLE_DEVICES\n";
+                        #else
                         << "Please start gpuserver with the same CUDA_VISIBLE_DEVICES\n";
+                        #endif
                     EXIT(EXIT_FAILURE);
                 }
             }
