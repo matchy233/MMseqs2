@@ -1,9 +1,17 @@
 #ifndef GAPLESS_KERNEL_CONFIG_CUH
 #define GAPLESS_KERNEL_CONFIG_CUH
 
+#include "cuda_hip_rename.h"
+
 #include <algorithm>
 #include <vector>
 #include <string>
+
+#if defined(__CUDACC__)
+    #include <cuda_runtime.h>
+    #include <cuda_runtime_api.h>
+    #include <cuda.h>
+#endif
 
 namespace cudasw4{
 
@@ -225,6 +233,85 @@ namespace cudasw4{
         return configs;
     }
 
+
+    __inline__
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_amd_gfx90a(){
+        std::vector<GaplessKernelConfig> configs{
+            {32,4,4,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {64,4,8,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {96,4,12,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {128,4,16,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {160,4,20,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {192,4,24,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {224,4,28,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {256,8,16,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {288,4,36,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {320,4,40,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {352,4,44,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {384,8,24,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {416,4,52,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {448,8,28,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {480,4,60,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {512,8,32,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {576,8,36,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {640,8,40,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {704,8,44,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {768,8,48,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {832,8,52,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {896,8,56,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {960,8,60,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {1024,8,64,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {1152,16,36,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {1280,16,40,0, GaplessKernelConfig::Approach::hardcodedzero},
+            {1408,16,44,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1536,16,48,0, GaplessKernelConfig::Approach::kernelparamzero}
+            // {1664,16,52,0, GaplessKernelConfig::Approach::hardcodedzero},
+            // {1792,16,56,0, GaplessKernelConfig::Approach::hardcodedzero},
+            // {1920,16,60,0, GaplessKernelConfig::Approach::kernelparamzero},
+            // {2048,16,64,0, GaplessKernelConfig::Approach::hardcodedzero},
+        };
+
+        return configs;
+    }
+
+    __inline__
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_amd_gfx942(){
+        std::vector<GaplessKernelConfig> configs{
+            {32,4,4,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {64,4,8,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {96,4,12,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {128,4,16,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {160,4,20,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {192,4,24,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {224,4,28,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {256,4,32,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {288,4,36,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {320,8,20,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {352,4,44,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {384,8,24,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {448,8,28,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {512,8,32,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {576,8,36,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {640,8,40,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {704,8,44,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {768,8,48,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {832,8,52,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {896,8,56,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {960,8,60,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1024,8,64,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1152,16,36,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1280,16,40,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1408,16,44,0, GaplessKernelConfig::Approach::kernelparamzero},
+            {1536,16,48,0, GaplessKernelConfig::Approach::kernelparamzero}
+            // {1664,16,52,0, GaplessKernelConfig::Approach::hardcodedzero},
+            // {1792,16,56,0, GaplessKernelConfig::Approach::hardcodedzero},
+            // {1920,16,60,0, GaplessKernelConfig::Approach::kernelparamzero},
+            // {2048,16,64,0, GaplessKernelConfig::Approach::hardcodedzero},
+        };
+
+        return configs;
+    }
+
     __inline__
     std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_sm103(){
         std::vector<GaplessKernelConfig> configs{
@@ -431,6 +518,11 @@ namespace cudasw4{
     }
 
     __inline__
+    std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless_amd_default(){
+        return getOptimalKernelConfigs_gapless_amd_gfx942();
+    }
+
+    __inline__
     std::vector<GaplessKernelConfig> getOptimalKernelConfigs_gapless(int deviceId, bool blackwell_int8){
         int ccMajor = 0;
         int ccMinor = 0;
@@ -439,6 +531,7 @@ namespace cudasw4{
 
         std::vector<GaplessKernelConfig> configs;
 
+    #if defined(__CUDACC__)
         if(ccMajor == 7 && ccMinor == 5){
             configs = getOptimalKernelConfigs_gapless_sm75();
         }else if(ccMajor == 8 && ccMinor == 0){
@@ -465,6 +558,16 @@ namespace cudasw4{
             configs = getOptimalKernelConfigs_gapless_default();
         }
 
+    #elif defined(__HIPCC__)
+
+        if(ccMajor == 9 && ccMinor == 0){
+            configs = getOptimalKernelConfigs_gapless_amd_gfx90a();
+        }else if(ccMajor == 9 && ccMinor == 4){
+            configs = getOptimalKernelConfigs_gapless_amd_gfx942();
+        }else{
+            configs = getOptimalKernelConfigs_gapless_amd_default();
+        }
+    #endif
         return configs;
     }
 

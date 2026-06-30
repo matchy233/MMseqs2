@@ -1,6 +1,17 @@
 #ifndef PSSM_CUH
 #define PSSM_CUH
 
+#if defined(__HIPCC__)
+    #include "hip/hip_runtime.h"
+    #include "hip/hip_fp16.h"
+#endif
+
+#if defined(__CUDACC__)
+    #include "cuda_fp16.h"
+#endif
+
+#include "cuda_hip_rename.h"
+
 #include "config.hpp"
 #include "types.hpp"
 #include "convert.cuh"
@@ -8,7 +19,9 @@
 #include "hpc_helpers/simple_allocation.cuh"
 #include "custom_score_types.cuh"
 
+#if defined(__CUDACC__)
 #include <cuda_fp16.h>
+#endif
 
 #include <vector>
 #include <cassert>

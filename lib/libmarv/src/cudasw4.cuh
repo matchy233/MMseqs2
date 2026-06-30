@@ -1,6 +1,8 @@
 #ifndef CUDASW4_CUH
 #define CUDASW4_CUH
 
+#include "cuda_hip_rename.h"
+
 #include "hpc_helpers/cuda_raiiwrappers.cuh"
 #include "hpc_helpers/all_helpers.cuh"
 #include "hpc_helpers/nvtx_markers.cuh"
@@ -37,6 +39,12 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/merge.h>
 #include <thrust/distance.h>
+#include <thrust/tuple.h>
+
+#if defined(__HIPCC__)
+    #include "hip/hip_runtime.h"
+    #include <hipcub/hipcub.hpp>
+#endif
 
 #include <iostream>
 #include <string>
@@ -848,7 +856,7 @@ namespace cudasw4{
                 numTop = value;
                 updateNumResultsPerQuery();
 
-                cub::SwitchDevice sd(deviceIds[0]);
+                MySwitchDevice sd(deviceIds[0]);
                 const int numGpus = deviceIds.size();           
 
                 h_finalAlignmentScores.resize(results_per_query);
@@ -2027,7 +2035,7 @@ namespace cudasw4{
                             ws.gpuPermutedPSSMforGapless.template fromGpuPSSMView<short, accessSize>(ws.gpuFullQueryPSSM.makeView(), config.groupsize, config.numRegs, gpuStreams[gpu]);
                             break;
                         case GaplessKernelConfig::Datatype::UInt8x4:
-                            ws.gpuPermutedPSSMforGapless.template fromGpuPSSMView<cuda::std::uint8_t, accessSize>(ws.gpuFullQueryPSSM.makeView(), config.groupsize, config.numRegs, gpuStreams[gpu]);
+                            ws.gpuPermutedPSSMforGapless.template fromGpuPSSMView<std::uint8_t, accessSize>(ws.gpuFullQueryPSSM.makeView(), config.groupsize, config.numRegs, gpuStreams[gpu]);
                             break;
                         default:
                             throw std::runtime_error("invalid config.datatype");
@@ -4175,6 +4183,7 @@ namespace cudasw4{
                     }
                     break;
                 case GaplessKernelConfig::Datatype::Short2:
+#if defined(__CUDACC__)
                     if(config.approach == GaplessKernelConfig::Approach::hardcodedzero){
                         PSSM_2D_View<short2> strided_PSSM = permutedPSSM.makeShort2View();
                         hardcodedzero::call_GaplessFilter_strided_PSSM_singletile_kernel<short2, 512>(
@@ -4192,6 +4201,9 @@ namespace cudasw4{
                             currentQueryLength, strided_PSSM, stream
                         );
                     }
+#else
+                    throw std::runtime_error("short2 not supported");
+#endif
                     break;
 #ifdef CUDASW_INT8_GAPLESS
                 case GaplessKernelConfig::Datatype::UInt8x4:
@@ -4282,6 +4294,7 @@ namespace cudasw4{
                         break;
                     case GaplessKernelConfig::Datatype::Short2:
                         {
+#if defined(__CUDACC__)
                             if(config.approach == GaplessKernelConfig::Approach::hardcodedzero){
                                 PSSM_2D_View<short2> strided_PSSM = permutedPSSM.makeShort2View();
                                 hardcodedzero::call_GaplessFilter_strided_PSSM_multitile_kernel<short2, 512>(
@@ -4303,6 +4316,9 @@ namespace cudasw4{
                                     multiTileTempStorage, tempStorageElementsPerGroup, stream
                                 );
                             }
+#else
+                            throw std::runtime_error("short2 not supported");
+#endif
                         }
                         break;
 #ifdef CUDASW_INT8_GAPLESS
@@ -4375,6 +4391,7 @@ namespace cudasw4{
                         stream
                     );
                 }else{
+#if defined(__CUDACC__)
                     PSSM_2D_View<int> strided_PSSM = permutedPSSM.makeView<int>();
                     call_amino_gpu_localAlignmentKernel_affinegap_floatOrInt_pssm_singletile<int, 512, withEndPosition, subjectIsCaseSensitive>(
                         numBlocks,
@@ -4387,6 +4404,9 @@ namespace cudasw4{
                         gex,
                         stream
                     );
+#else
+                    throw std::runtime_error("dpx not supported");
+#endif
                 }
             }else{
                 auto config = getMultiTileGroupRegConfigForPSSM_SW(currentQueryLength);
@@ -4444,6 +4464,7 @@ namespace cudasw4{
                             stream
                         );
                     }else{
+#if defined(__CUDACC__)
                         PSSM_2D_View<int> strided_PSSM = permutedPSSM.makeView<int>();
                         call_amino_gpu_localAlignmentKernel_affinegap_floatOrInt_pssm_multitile<int, threadBlockSize, withEndPosition, subjectIsCaseSensitive>(
                             numBlocks,
@@ -4463,6 +4484,9 @@ namespace cudasw4{
                             tempBytesPerGroup, 
                             stream
                         );
+#else
+                        throw std::runtime_error("dpx not supported");
+#endif
                     }
                 }
             }
@@ -4473,7 +4497,7 @@ namespace cudasw4{
                 numTop = value;
                 updateNumResultsPerQuery();
 
-                cub::SwitchDevice sd(deviceIds[0]);
+                MySwitchDevice sd(deviceIds[0]);
                 const int numGpus = deviceIds.size();           
 
                 h_finalAlignmentScores.resize(results_per_query);
